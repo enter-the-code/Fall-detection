@@ -1,2 +1,5 @@
 # Binary
 *.exe
+
+# VS Code
+*.code-workspace

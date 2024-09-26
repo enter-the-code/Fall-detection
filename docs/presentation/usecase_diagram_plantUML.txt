@@ -1,0 +1,28 @@
+@startuml
+actor Patient1
+actor Patient2
+actor Patient3
+actor Patient4
+actor Patient5
+actor Manager
+
+rectangle "mmWave Fall Detection" {
+    (Detect/Track Patient) as Detect
+    (Current State) as State
+    (3D Cloud Image) as 3D
+    (Meta Data) as Meta
+}
+
+Detect --> State : <<include>>
+Detect --> 3D : <<include>>
+Detect --> Meta : <<include>>
+State --> Manager
+3D --> Manager
+Meta --> Manager
+
+Patient1 --> Detect : action
+Patient2 --> Detect : action
+Patient3 --> Detect : action
+Patient4 --> Detect : action
+Patient5 --> Detect : action
+@enduml

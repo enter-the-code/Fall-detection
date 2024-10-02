@@ -4,3 +4,11 @@
 * 가급적이면 docs 브랜치 사용하여 업로드 후 PR
 * 용량을 줄이기 위해서, 재사용 할 이미지는 별도 폴더에 나눠 저장
 * ppt 파일은 이미지를 제거한 상태로, 원본 자료는 pdf로 저장
+
+## Rebase Policy
+PR 통한 rebase 이후 해당 branch 계속하여 사용할 시, main으로부터 rebase 필요
+```bash
+git checkout branch_name
+git rebase main
+git push --force-with-lease origin branch_name
+```

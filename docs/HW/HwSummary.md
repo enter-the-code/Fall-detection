@@ -30,10 +30,16 @@ single USB로 연결(UART + power supply - CP2015 USB to UART emulator)\
 정상 연결 시 장치 관리자에 2개의 virtual COM port 표시됨
 
 ### S1 switch Settings
-* Flashing mode\
-on/off/on/on/off/-
-* Functional mode\
-off/off/on/on/off/-
+* Flashing mode
+
+| 1 | 2 | 3 | 4 | 5 | 6 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| on | off | on | on | off | - |
+* Functional mode
+
+| 1 | 2 | 3 | 4 | 5 | 6 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| off | off | on | on | off | - |
 
 2. DCA1000EVM Mode 
 (direct connection without cable between boards)\

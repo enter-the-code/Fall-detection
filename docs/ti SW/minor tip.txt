@@ -1,0 +1,2 @@
+MSS는 ARM processor에서 돌아가는 코드
+DSS는 DSP processor에서 돌아가는 코드

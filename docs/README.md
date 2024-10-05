@@ -6,9 +6,9 @@
 * ppt 파일은 이미지를 제거한 상태로, 원본 자료는 pdf로 저장
 
 ## Rebase Policy
-PR 통한 rebase 이후 해당 branch 계속하여 사용할 시, main으로부터 rebase 필요
+PR 통한 rebase 이후 해당 branch 계속하여 사용할 시, main으로부터 merge 필요
 ```bash
 git checkout branch_name
-git rebase main
-git push --force-with-lease origin branch_name
+git merge main
+git push origin branch_name
 ```

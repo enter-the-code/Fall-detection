@@ -6,6 +6,7 @@
  <toolbox_install_dir>\tools\visualizers\Applications_Visualizer\Industrial_Visualizer
 
 2. 센서의 물리 리셋 버튼 1회 누르기
+* Start 이전 물리 리셋 버튼 제대로 누르지 않으면 비정상 작동 가능성 높음
 
 3. COM 포트 지정 후 Connect
 * CLI COM : Enhanced Port

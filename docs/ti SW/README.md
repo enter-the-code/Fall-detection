@@ -35,3 +35,4 @@ PyQt2 기반, 소스코드 제공됨
 ## Drivers
 * CP210x Universal Windows Driver
 * FTDI CDM Driver
+* [How to install](./driver%20install.md)

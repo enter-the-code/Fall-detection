@@ -1,0 +1,11 @@
+@startuml
+actor Patient
+Patient -> IWR6843ISK : Status changed
+IWR6843ISK -> DataCommunication : Sensing and Send data
+DataCommunication -> AIBackend : Send data for AI
+AIBackend -> UIFrontend : Return predicted state
+DataCommunication -> UIFrontend : Send data for UI
+actor User
+UIFrontend -> User : Display 3D image and meta data
+User --> Patient : Take action (If needed)
+@enduml

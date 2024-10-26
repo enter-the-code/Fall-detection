@@ -9,7 +9,14 @@ ui 정의
 | Demo | demoList |
 | CLI COM | cli_num_line |
 | Data COM | data_num_line |
-| CONNECT_N/Y_MSG | connectBtn |
+| connectStatus | connectBtn |
+
+* connectStatus value
+    * CONNECT_Y_MSG
+    * CONNECT_N_MSG
+* connectBtn value
+    * CONNECT_BTN_MSG
+    * CONNECT_BTN_RESET_MSG
 
 ### Signal
 * demoList -> demoChanged

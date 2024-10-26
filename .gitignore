@@ -3,3 +3,6 @@
 
 # VS Code
 *.code-workspace
+
+# config file
+*.ini

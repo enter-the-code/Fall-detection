@@ -11,7 +11,6 @@ from PySide2.QtCore import QTimer, Qt, QThread, Signal
 from PySide2.QtGui import QKeySequence, QIntValidator
 from PySide2.QtWidgets import (
     QAction,
-    QTabWidget,
     QGridLayout,
     QGroupBox,
     QLineEdit,
@@ -21,7 +20,6 @@ from PySide2.QtWidgets import (
     QFileDialog,
     QMainWindow,
     QWidget,
-    QCheckBox,
     QApplication,
     QShortcut,
     QStatusBar,
@@ -45,7 +43,7 @@ class Window(QMainWindow):
     def __init__(self, parent=None, size=[], title="app"):
         super().__init__(parent)
 
-        self.core = Core()
+        self.core = Core(self)
 
         # ini parser setting
         self.iniParser = ConfigParser()
@@ -56,29 +54,10 @@ class Window(QMainWindow):
         if self.iniParser.sections() == []: # file with no contents
             self.core.ini_create(self.iniParser)
 
-        self.demo_idx = self.iniParser.getint(
-            "Selection", "demo_idx", fallback=0
-        )
-        if self.demo_idx >= len(DEMO_LIST):
-            self.demo_idx = 0
-
-        self.cli_com = self.iniParser.get(
-            "Selection", "cli_com", fallback=""
-        )
-        try:
-            if (self.cli_com != "") and ((int(self.cli_com) < 1) or (int(self.cli_com) > 256)):
-                self.cli_com = ""
-        except ValueError:
-                self.cli_com = ""
-
-        self.data_com = self.iniParser.get(
-            "Selection", "data_com", fallback=""
-        )
-        try:
-            if (self.data_com != "") and ((int(self.data_com) < 1) or (int(self.data_com) > 256)):
-                self.data_com = ""
-        except ValueError:
-                self.data_com = ""
+        self.demo_idx = self.core.ini_get_demo(self.iniParser)
+        self.cli_com = self.core.ini_get_cli_com(self.iniParser)
+        self.data_com = self.core.ini_get_data_com(self.iniParser)
+        self.cfg_path = self.core.ini_get_cfg_path(self.iniParser)
 
         # part widget declare
         self.initConnectBox()
@@ -159,7 +138,7 @@ class Window(QMainWindow):
         self.cfgBox.setLayout(self.cfgLayout)
 
         # inner box
-        self.filenameCfg = QLineEdit()
+        self.filenameCfg = QLineEdit(self.cfg_path)
         self.cfgLayout.addWidget(self.filenameCfg, 0, 0)
 
         self.selectCfgBtn = QPushButton("Select config")
@@ -205,13 +184,14 @@ class Window(QMainWindow):
 
     def closeEvent(self, event):
         event.accept()
-        self.core.ini_save(self, self.iniParser)
+        self.core.ini_save(self.iniParser)
         QApplication.quit()
 
 class Core:
-    def __init__(self):
+    def __init__(self, window: Window):
         self.parser = UARTParser()
         self.demo = DEMO_LIST[0]
+        self.window = window
 
     def selectFile(self, fLine: QLineEdit):
         try:
@@ -233,6 +213,46 @@ class Core:
             self.parser.demo = self.demo
         # TODO : cotinue from 498
 
+    
+    # INI Parse
+    def ini_get_demo(self, parser: ConfigParser):
+        self.demo_idx = self.window.iniParser.getint(
+            "Selection", "demo_idx", fallback=0
+        )
+        if self.demo_idx >= len(DEMO_LIST):
+            self.demo_idx = 0
+        return self.demo_idx
+    
+    def ini_get_cli_com(self, parser: ConfigParser):
+        self.cli_com = self.window.iniParser.get(
+            "Selection", "cli_com", fallback=""
+        )
+        try:
+            if (self.cli_com != "") and ((int(self.cli_com) < 1) or (int(self.cli_com) > 256)):
+                self.cli_com = ""
+        except ValueError:
+                self.cli_com = ""
+        return self.cli_com
+    
+    def ini_get_data_com(self, parser: ConfigParser):
+        self.data_com = self.window.iniParser.get(
+            "Selection", "data_com", fallback=""
+        )
+        try:
+            if (self.data_com != "") and ((int(self.data_com) < 1) or (int(self.data_com) > 256)):
+                self.data_com = ""
+        except ValueError:
+                self.data_com = ""
+        return self.data_com
+
+    def ini_get_cfg_path(self, parser: ConfigParser):
+        self.cfg_path = self.window.iniParser.get(
+            "Selection", "cfg_path", fallback=""
+        )
+        if not os.path.exists(self.cfg_path):
+            self.cfg_path = ""
+        return self.cfg_path
+
     def ini_create(self, parser: ConfigParser):
         if "Selection" not in parser:
             parser["Selection"] = {
@@ -248,10 +268,10 @@ class Core:
         with open(INI_PATH, "w", encoding="UTF-8") as ini_file:
             parser.write(ini_file)
     
-    def ini_save(self, window: Window, parser: ConfigParser):
-        parser["Selection"]["Demo_idx"] = str(window.demo_idx)
-        parser["Selection"]["cli_com"] = window.cli_num_line.text()
-        parser["Selection"]["data_com"] = window.data_num_line.text()
+    def ini_save(self, parser: ConfigParser):
+        parser["Selection"]["Demo_idx"] = str(self.window.demo_idx)
+        parser["Selection"]["cli_com"] = self.window.cli_num_line.text()
+        parser["Selection"]["data_com"] = self.window.data_num_line.text()
         
 
         self.ini_write(parser)

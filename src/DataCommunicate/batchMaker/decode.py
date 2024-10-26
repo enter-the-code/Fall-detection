@@ -40,7 +40,7 @@ DEMO_LIST = ["People Count", "Out of Box"]
 
 
 class Window(QMainWindow):
-    def __init__(self, parent=None, size=[], title="app"):
+    def __init__(self, parent=None, title="app"):
         super().__init__(parent)
 
         self.core = Core(self)
@@ -139,6 +139,7 @@ class Window(QMainWindow):
 
         # inner box
         self.filenameCfg = QLineEdit(self.cfg_path)
+        self.filenameCfg.setReadOnly(True)
         self.cfgLayout.addWidget(self.filenameCfg, 0, 0)
 
         self.selectCfgBtn = QPushButton("Select config")
@@ -169,13 +170,12 @@ class Window(QMainWindow):
         self.statusBar().showMessage("Select configuartion file")
         # REF : core.selectCfg
 
+        fname = self.core.selectFile(cfgLine)
         try:
-            fname = self.core.selectFile(cfgLine)
-            # TODO : record it on ini
             self.core.parseCfg(fname)
-        except:
+        except Exception as e:
             self.cfg_failed_warn = QMessageBox.warning(
-                self, "Parse error", "cfg Parsing failed"
+                self, "Cfg selection error", repr(e)
             )
 
     def startSensor(self):
@@ -196,9 +196,12 @@ class Core:
     def selectFile(self, fLine: QLineEdit):
         try:
             cfg_dir = BASE_DIR
-            path = ""   # TODO : recover from ini
+            # recover dir from ini
+            path = fLine.text()
             if path != "":
-                cfg_dir = path
+                cfg_dir = os.path.dirname(path)
+                if not os.path.exists(cfg_dir):
+                    cfg_dir = ""
         except:
             cfg_dir = ""
 
@@ -272,8 +275,8 @@ class Core:
         parser["Selection"]["Demo_idx"] = str(self.window.demo_idx)
         parser["Selection"]["cli_com"] = self.window.cli_num_line.text()
         parser["Selection"]["data_com"] = self.window.data_num_line.text()
+        parser["Selection"]["cfg_path"] = self.window.filenameCfg.text()
         
-
         self.ini_write(parser)
 
 
@@ -298,10 +301,8 @@ class parseUartThread(QThread):
 
 
 if __name__ == '__main__':
-    # may not use app screen size
+    # # may not use app screen size
     app = QApplication(sys.argv)
-    screen = app.primaryScreen()
-    size = screen.size()
-    main = Window(size=size, title="Batch Maker : Fall Detect")
+    main = Window(title="Batch Maker : Fall Detect")
     main.show()
     sys.exit(app.exec_())

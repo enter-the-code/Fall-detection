@@ -8,7 +8,7 @@ import datetime
 # PySide imports
 from PySide2 import QtGui
 from PySide2.QtCore import QTimer, Qt, QThread, Signal
-from PySide2.QtGui import QKeySequence
+from PySide2.QtGui import QKeySequence, QIntValidator
 from PySide2.QtWidgets import (
     QAction,
     QTabWidget,
@@ -34,6 +34,8 @@ from configparser import ConfigParser, NoOptionError
 
 # MACRO constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+INI_FILE_NAME = "batch_maker.ini"
+INI_PATH = os.path.join(BASE_DIR, INI_FILE_NAME)
 CONNECT_N_MSG = "Not Connected"
 CONNECT_Y_MSG = "Connected"
 DEMO_LIST = ["People Count", "Out of Box"]
@@ -44,6 +46,39 @@ class Window(QMainWindow):
         super().__init__(parent)
 
         self.core = Core()
+
+        # ini parser setting
+        self.iniParser = ConfigParser()
+        if not os.path.exists(INI_PATH):
+            self.core.ini_create(self.iniParser)
+        
+        self.iniParser.read(INI_PATH)
+        if self.iniParser.sections() == []: # file with no contents
+            self.core.ini_create(self.iniParser)
+
+        self.demo_idx = self.iniParser.getint(
+            "Selection", "demo_idx", fallback=0
+        )
+        if self.demo_idx >= len(DEMO_LIST):
+            self.demo_idx = 0
+
+        self.cli_com = self.iniParser.get(
+            "Selection", "cli_com", fallback=""
+        )
+        try:
+            if (self.cli_com != "") and ((int(self.cli_com) < 1) or (int(self.cli_com) > 256)):
+                self.cli_com = ""
+        except ValueError:
+                self.cli_com = ""
+
+        self.data_com = self.iniParser.get(
+            "Selection", "data_com", fallback=""
+        )
+        try:
+            if (self.data_com != "") and ((int(self.data_com) < 1) or (int(self.data_com) > 256)):
+                self.data_com = ""
+        except ValueError:
+                self.data_com = ""
 
         # part widget declare
         self.initConnectBox()
@@ -89,15 +124,15 @@ class Window(QMainWindow):
         self.demoList = QComboBox()
         self.demoList.addItems(DEMO_LIST)
         self.connectCfgLayout.addWidget(self.demoList, 0, 1)
-        self.demoList.setCurrentIndex(0)
+        self.demoList.setCurrentIndex(self.demo_idx)
 
         self.connectCfgLayout.addWidget(QLabel("CLI COM"), 1, 0)
-        self.cli_num_line = QLineEdit("")
+        self.cli_num_line = QLineEdit(self.cli_com)
         self.cli_num_line.setToolTip("Enhanced Port")
         self.connectCfgLayout.addWidget(self.cli_num_line, 1, 1)
         
         self.connectCfgLayout.addWidget(QLabel("Data COM"), 2, 0)
-        self.data_num_line = QLineEdit("")
+        self.data_num_line = QLineEdit(self.data_com)
         self.data_num_line.setToolTip("Standard Port")
         self.connectCfgLayout.addWidget(self.data_num_line, 2, 1)
 
@@ -107,6 +142,11 @@ class Window(QMainWindow):
         self.connectBtn = QPushButton("Connect")
         self.connectBtn.setMaximumWidth(100)
         self.connectBtnLayout.addWidget(self.connectBtn, 0, 1)
+
+        # COM Port range restriction
+        self.COM_valid = QIntValidator(1, 256)
+        self.cli_num_line.setValidator(self.COM_valid)
+        self.data_num_line.setValidator(self.COM_valid)
 
         # signal connection
         self.demoList.currentIndexChanged.connect(self.demoChanged)
@@ -142,6 +182,7 @@ class Window(QMainWindow):
             
 
     def demoChanged(self):
+        self.demo_idx = self.demoList.currentIndex()
         self.statusBar().showMessage("Demo : " + self.demoList.currentText())
         # REF : onChangeDemo
 
@@ -161,6 +202,11 @@ class Window(QMainWindow):
     def startSensor(self):
         self.statusBar().showMessage("Send config and start")
         # REF : core.sendCfg
+
+    def closeEvent(self, event):
+        event.accept()
+        self.core.ini_save(self, self.iniParser)
+        QApplication.quit()
 
 class Core:
     def __init__(self):
@@ -187,7 +233,28 @@ class Core:
             self.parser.demo = self.demo
         # TODO : cotinue from 498
 
+    def ini_create(self, parser: ConfigParser):
+        if "Selection" not in parser:
+            parser["Selection"] = {
+                "Demo_idx" : "0",
+                "CLI_COM" : "",
+                "Data_COM" : "",
+                "cfg_path" : ""
+            }
 
+        self.ini_write(parser)
+
+    def ini_write(self, parser: ConfigParser):
+        with open(INI_PATH, "w", encoding="UTF-8") as ini_file:
+            parser.write(ini_file)
+    
+    def ini_save(self, window: Window, parser: ConfigParser):
+        parser["Selection"]["Demo_idx"] = str(window.demo_idx)
+        parser["Selection"]["cli_com"] = window.cli_num_line.text()
+        parser["Selection"]["data_com"] = window.data_num_line.text()
+        
+
+        self.ini_write(parser)
 
 
 class UARTParser():

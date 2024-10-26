@@ -171,8 +171,12 @@ class Window(QMainWindow):
         # REF : core.selectCfg
 
         fname = self.core.selectFile(cfgLine)
+        if fname == "":
+            return  # selection canceled
         try:
             self.core.parseCfg(fname)
+            # if parse succed, set text
+            cfgLine.setText(fname)
         except Exception as e:
             self.cfg_failed_warn = QMessageBox.warning(
                 self, "Cfg selection error", repr(e)
@@ -206,7 +210,6 @@ class Core:
             cfg_dir = ""
 
         fname = QFileDialog.getOpenFileName(caption="Open .cfg File", dir=cfg_dir, filter="cfg(*.cfg)")
-        fLine.setText(str(fname[0]))
         return fname[0]
 
     def parseCfg(self, fname):

@@ -24,17 +24,26 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QApplication,
     QShortcut,
-    QStatusBar
+    QStatusBar,
+    QMessageBox
 )
 
+# ini config imports
+from configparser import ConfigParser, NoOptionError
+
+
+# MACRO constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONNECT_N_MSG = "Not Connected"
 CONNECT_Y_MSG = "Connected"
 DEMO_LIST = ["People Count", "Out of Box"]
 
+
 class Window(QMainWindow):
     def __init__(self, parent=None, size=[], title="app"):
         super().__init__(parent)
+
+        self.core = Core()
 
         # part widget declare
         self.initConnectBox()
@@ -54,13 +63,12 @@ class Window(QMainWindow):
         self.statusBar().showMessage("Status Description")
 
 
-        # todo : min size setting - dynamic?
+        # TODO : min size setting - dynamic?
         # self.setMinimumHeight(450)
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(350)
 
         # Shortcut
-        ## ctrl+W to close program
-        self.shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
+        self.shortcut = QShortcut(QKeySequence("Ctrl+W"), self) # ctrl+W to close program
         self.shortcut.activated.connect(self.close)
 
         self.setCentralWidget(self.central)
@@ -80,16 +88,17 @@ class Window(QMainWindow):
         self.connectCfgLayout.addWidget(QLabel("Demo"), 0, 0)
         self.demoList = QComboBox()
         self.demoList.addItems(DEMO_LIST)
-        self.demoList.currentIndexChanged.connect(self.demoChanged) # demo change connect
         self.connectCfgLayout.addWidget(self.demoList, 0, 1)
         self.demoList.setCurrentIndex(0)
 
         self.connectCfgLayout.addWidget(QLabel("CLI COM"), 1, 0)
         self.cli_num_line = QLineEdit("")
+        self.cli_num_line.setToolTip("Enhanced Port")
         self.connectCfgLayout.addWidget(self.cli_num_line, 1, 1)
         
         self.connectCfgLayout.addWidget(QLabel("Data COM"), 2, 0)
         self.data_num_line = QLineEdit("")
+        self.data_num_line.setToolTip("Standard Port")
         self.connectCfgLayout.addWidget(self.data_num_line, 2, 1)
 
         self.connectStatus = QLabel(CONNECT_N_MSG)
@@ -98,19 +107,87 @@ class Window(QMainWindow):
         self.connectBtn = QPushButton("Connect")
         self.connectBtn.setMaximumWidth(100)
         self.connectBtnLayout.addWidget(self.connectBtn, 0, 1)
-        self.connectBtn.clicked.connect(self.startConnect)  # click action connect
+
+        # signal connection
+        self.demoList.currentIndexChanged.connect(self.demoChanged)
+        self.connectBtn.clicked.connect(self.startConnect)
 
     def initCfgBox(self):
-        self.cfgBox = QGroupBox("Cfg")
+        # outter box
+        self.cfgBox = QGroupBox("Config")
+        self.cfgLayout = QGridLayout()
+        self.cfgBox.setLayout(self.cfgLayout)
+
+        # inner box
+        self.filenameCfg = QLineEdit()
+        self.cfgLayout.addWidget(self.filenameCfg, 0, 0)
+
+        self.selectCfgBtn = QPushButton("Select config")
+        self.selectCfgBtn.setFixedWidth(100)
+        self.cfgLayout.addWidget(self.selectCfgBtn, 0, 1)
+
+        self.sendCfgBtn = QPushButton("Start with config")
+        self.sendCfgBtn.setEnabled(False)
+        self.cfgLayout.addWidget(self.sendCfgBtn, 1, 0, 1, 2)
+
+        # signal connection
+        self.selectCfgBtn.clicked.connect(lambda: self.selectCfg(self.filenameCfg))
+        self.sendCfgBtn.clicked.connect(self.startSensor)
 
     
     def startConnect(self):
         if(self.connectStatus.text() == CONNECT_N_MSG):
+            self.statusBar().showMessage("Start connect")
             # REF : onConnect(self)
-            pass
+            
 
     def demoChanged(self):
-        pass    # REF : onChangeDemo
+        self.statusBar().showMessage("Demo : " + self.demoList.currentText())
+        # REF : onChangeDemo
+
+    def selectCfg(self, cfgLine):
+        self.statusBar().showMessage("Select configuartion file")
+        # REF : core.selectCfg
+
+        try:
+            fname = self.core.selectFile(cfgLine)
+            # TODO : record it on ini
+            self.core.parseCfg(fname)
+        except:
+            self.cfg_failed_warn = QMessageBox.warning(
+                self, "Parse error", "cfg Parsing failed"
+            )
+
+    def startSensor(self):
+        self.statusBar().showMessage("Send config and start")
+        # REF : core.sendCfg
+
+class Core:
+    def __init__(self):
+        self.parser = UARTParser()
+        self.demo = DEMO_LIST[0]
+
+    def selectFile(self, fLine: QLineEdit):
+        try:
+            cfg_dir = BASE_DIR
+            path = ""   # TODO : recover from ini
+            if path != "":
+                cfg_dir = path
+        except:
+            cfg_dir = ""
+
+        fname = QFileDialog.getOpenFileName(caption="Open .cfg File", dir=cfg_dir, filter="cfg(*.cfg)")
+        fLine.setText(str(fname[0]))
+        return fname[0]
+
+    def parseCfg(self, fname):
+        with open(fname, "r") as cfg_file:
+            self.cfg_lines = cfg_file.readlines()
+            self.parser.cfg = self.cfg_lines
+            self.parser.demo = self.demo
+        # TODO : cotinue from 498
+
+
 
 
 class UARTParser():

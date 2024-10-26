@@ -4,6 +4,8 @@ import sys
 import serial
 import math
 import datetime
+import numpy as np
+import struct
 
 # PySide imports
 from PySide2 import QtGui
@@ -36,6 +38,9 @@ INI_FILE_NAME = "batch_maker.ini"
 INI_PATH = os.path.join(BASE_DIR, INI_FILE_NAME)
 CONNECT_N_MSG = "Not Connected"
 CONNECT_Y_MSG = "Connected"
+CONNECT_NA_MSG = "Unable to Connect"
+CONNECT_BTN_MSG = "Connect"
+CONNECT_BTN_RESET_MSG = "Reset Connection"
 DEMO_LIST = ["People Count", "Out of Box"]
 STATUS_MSG_DELAY = 2000
 
@@ -79,8 +84,7 @@ class Window(QMainWindow):
         self.statusBar().addWidget(QLabel("Status Description"))
 
 
-        # TODO : min size setting - dynamic?
-        # self.setMinimumHeight(450)
+        # TODO : fixed size set
         self.setMinimumWidth(350)
 
         # Shortcut
@@ -120,9 +124,9 @@ class Window(QMainWindow):
         self.connectStatus = QLabel(CONNECT_N_MSG)
         self.connectStatus.setAlignment(Qt.AlignCenter)
         self.connectBtnLayout.addWidget(self.connectStatus, 0, 0)
-        self.connectBtn = QPushButton("Connect")
+        self.connectBtn = QPushButton(CONNECT_BTN_MSG)
         self.connectBtn.setToolTip("You MUST set COM port before connection")
-        self.connectBtn.setMaximumWidth(100)
+        self.connectBtn.setMaximumWidth(120)
         self.connectBtnLayout.addWidget(self.connectBtn, 0, 1)
 
         # COM Port range restriction
@@ -158,20 +162,30 @@ class Window(QMainWindow):
         self.sendCfgBtn.clicked.connect(self.startSensor)
 
     
+    # REF : onConnect(self) - DONE
     def startConnect(self):
-        if(self.connectStatus.text() == CONNECT_N_MSG):
-            self.statusBar().showMessage("Connection started", STATUS_MSG_DELAY)
-            # REF : onConnect(self)
-            
+        if(self.connectStatus.text() == CONNECT_N_MSG or self.connectStatus.text() == CONNECT_NA_MSG):
+            if self.core.connectCom(self.connectStatus) == 0:
+                self.connectBtn.setText("Reset Connection")
+                self.sendCfgBtn.setEnabled(True)
+                self.statusBar().showMessage("Connected", STATUS_MSG_DELAY)
+            else:
+                self.sendCfgBtn.setEnabled(False)
+                self.statusBar().showMessage("Connect Failed", STATUS_MSG_DELAY)
+        else:
+            self.core.gracefulReset()
+            self.connectStatus.setText(CONNECT_N_MSG)
+            self.connectBtn.setText(CONNECT_BTN_MSG)
+            self.sendCfgBtn.setEnabled(False)
 
+    # REF : onChangeDemo
     def demoChanged(self):
         self.demo_idx = self.demoList.currentIndex()
         self.statusBar().showMessage("Demo : " + self.demoList.currentText(), STATUS_MSG_DELAY)
-        # REF : onChangeDemo
 
+    # REF : core.selectCfg
     def selectCfg(self, cfgLine):
         self.statusBar().showMessage("Select configuartion file", STATUS_MSG_DELAY)
-        # REF : core.selectCfg
 
         fname = self.core.selectFile(cfgLine)
         if fname == "":
@@ -186,9 +200,9 @@ class Window(QMainWindow):
                 self, "Cfg selection error", repr(e)
             )
 
+    # REF : core.sendCfg
     def startSensor(self):
         self.statusBar().showMessage("Send config and start")
-        # REF : core.sendCfg
 
     def closeEvent(self, event):
         event.accept()
@@ -221,7 +235,41 @@ class Core:
             self.cfg_lines = cfg_file.readlines()
             self.parser.cfg = self.cfg_lines
             self.parser.demo = self.demo
-        # TODO : cotinue from 498
+        # TODO : cotinue from line 498
+
+    # Connection Handling
+    # REF : connectCom()
+    def connectCom(self, statusLine: QLabel):
+        self.cli_com = int(self.window.cli_num_line.text())
+        self.data_com = int(self.window.data_num_line.text())
+
+        # init thread
+        self.uart_thread = parseUartThread(self.parser)
+
+        # TODO thread add : line 632
+
+        try:
+            if os.name == "nt":
+                uart = "COM" + str(self.cli_com)
+                data = "COM" + str(self.data_com)
+            else:
+                uart = self.cli_com
+                data = self.data_com
+            self.parser.connectComPort(uart, data)
+            self.window.connectStatus.setText(CONNECT_Y_MSG)
+        except:
+            self.window.connectStatus.setText(CONNECT_NA_MSG)
+            return -1
+
+        return 0
+
+    # REF : gracefulReset()
+    def gracefulReset(self):
+        # TODO timer and thread stop
+        if self.parser.cliCom is not None:
+            self.parser.cliCom.close()
+        if self.parser.dataCom is not None:
+            self.parser.dataCom.close()
 
     
     # INI Parse
@@ -289,18 +337,53 @@ class Core:
 
 class UARTParser():
     def __init__(self):
-        pass
+        self.binData = bytearray(0)
+        self.uartCounter = 0
     # self.parserType는 DoubleCOMPort로 고정
+
+    def readAndParseUartCOMPort(self):
+        self.fail = 0
+        index = 0
+        # TODO : gui_parser.py line 71
+    
+    def parseStandardFrame(self, frameData):
+        headerStruct = 'Q8I'    # UART binary format what ti sensor often uses
+        frameHeaderLen = struct.calcsize(headerStruct)
+        tlvHeaderLength = 8
+
+        outputDict = {}
+        outputDict['error'] = 0
+
+        totalLenCheck = 0
+
+        # Read the frame Header
+        try:
+            magic, version, totalPacketLen, platform, frameNum, timeCPUCycles, numDetectedObj, numTLVs, subFrameNum = struct.unpack(headerStruct, frameData[:frameHeaderLen])
+        except:
+            # header read failed
+            outputDict['error'] = 1
+
+        # Move frameData ptr to start of 1st TLV   
+        frameData = frameData[frameHeaderLen:]
+        totalLenCheck += frameHeaderLen
+
+        # TODO : parseFrame.py line 89
+
+    def connectComPort(self, cliCom, dataCom):
+        self.cliCom = serial.Serial(cliCom, 115200, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=0.6)
+        self.dataCom = serial.Serial(dataCom, 921600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=0.6)
+        self.dataCom.reset_output_buffer()
 
 
 class parseUartThread(QThread):
     fin = Signal(dict)
 
-    def __init__(self): # uParser 받지 않음
+    def __init__(self, uParser: UARTParser):
             QThread.__init__(self)
+            self.parser = uParser
 
     def run(self):
-        outputDict = self.parser.readAndParseUartSingleCOMPort()
+        outputDict = self.parser.readAndParseUartCOMPort()
         self.fin.emit(outputDict)
 
     def stop(self):
@@ -308,7 +391,6 @@ class parseUartThread(QThread):
 
 
 if __name__ == '__main__':
-    # # may not use app screen size
     app = QApplication(sys.argv)
     main = Window(title="Batch Maker : Fall Detect")
     main.show()

@@ -37,6 +37,7 @@ INI_PATH = os.path.join(BASE_DIR, INI_FILE_NAME)
 CONNECT_N_MSG = "Not Connected"
 CONNECT_Y_MSG = "Connected"
 DEMO_LIST = ["People Count", "Out of Box"]
+STATUS_MSG_DELAY = 2000
 
 
 class Window(QMainWindow):
@@ -73,8 +74,9 @@ class Window(QMainWindow):
         self.gridLayout.addWidget(self.connectBox, 0, 0)
         self.gridLayout.addWidget(self.cfgBox, 1, 0)
 
+        # status bar setting
         self.setStatusBar(QStatusBar(self)) # bottom bar that explains tooltips
-        self.statusBar().showMessage("Status Description")
+        self.statusBar().addWidget(QLabel("Status Description"))
 
 
         # TODO : min size setting - dynamic?
@@ -119,6 +121,7 @@ class Window(QMainWindow):
         self.connectStatus.setAlignment(Qt.AlignCenter)
         self.connectBtnLayout.addWidget(self.connectStatus, 0, 0)
         self.connectBtn = QPushButton("Connect")
+        self.connectBtn.setToolTip("You MUST set COM port before connection")
         self.connectBtn.setMaximumWidth(100)
         self.connectBtnLayout.addWidget(self.connectBtn, 0, 1)
 
@@ -157,17 +160,17 @@ class Window(QMainWindow):
     
     def startConnect(self):
         if(self.connectStatus.text() == CONNECT_N_MSG):
-            self.statusBar().showMessage("Start connect")
+            self.statusBar().showMessage("Connection started", STATUS_MSG_DELAY)
             # REF : onConnect(self)
             
 
     def demoChanged(self):
         self.demo_idx = self.demoList.currentIndex()
-        self.statusBar().showMessage("Demo : " + self.demoList.currentText())
+        self.statusBar().showMessage("Demo : " + self.demoList.currentText(), STATUS_MSG_DELAY)
         # REF : onChangeDemo
 
     def selectCfg(self, cfgLine):
-        self.statusBar().showMessage("Select configuartion file")
+        self.statusBar().showMessage("Select configuartion file", STATUS_MSG_DELAY)
         # REF : core.selectCfg
 
         fname = self.core.selectFile(cfgLine)
@@ -177,6 +180,7 @@ class Window(QMainWindow):
             self.core.parseCfg(fname)
             # if parse succed, set text
             cfgLine.setText(fname)
+            self.statusBar().showMessage("cfg set : " + os.path.basename(fname), STATUS_MSG_DELAY)
         except Exception as e:
             self.cfg_failed_warn = QMessageBox.warning(
                 self, "Cfg selection error", repr(e)

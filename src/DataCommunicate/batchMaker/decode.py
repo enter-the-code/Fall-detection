@@ -247,6 +247,7 @@ class Core:
         self.uart_thread = parseUartThread(self.parser)
 
         # TODO thread add : line 632
+        # Notice : timer starts from sendCfg() : line 612
 
         try:
             if os.name == "nt":

@@ -15,12 +15,6 @@ pip install Pyside2
 ```
 로 설치 가능하다
 
-path 인식에 문제 있을 시
-```cmd
-conda create --prefix C:\MyCondaEnvs\myenv python=3.9
-```
-로 직접 지정해주는 방법 시도해보자
-
 ### pyqtgraph
 ```cmd
 pip install pyqtgraph

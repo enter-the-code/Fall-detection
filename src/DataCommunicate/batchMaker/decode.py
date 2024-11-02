@@ -41,6 +41,8 @@ CONNECT_Y_MSG = "Connected"
 CONNECT_NA_MSG = "Unable to Connect"
 CONNECT_BTN_MSG = "Connect"
 CONNECT_BTN_RESET_MSG = "Reset Connection"
+SEND_CFG_BTN_START_MSG = "Start with config"
+SEND_CFG_BTN_RUN_MSG = "Sensor now Running"
 DEMO_LIST = ["People Count", "Out of Box"]
 STATUS_MSG_DELAY = 2000
 
@@ -153,7 +155,7 @@ class Window(QMainWindow):
         self.selectCfgBtn.setFixedWidth(100)
         self.cfgLayout.addWidget(self.selectCfgBtn, 0, 1)
 
-        self.sendCfgBtn = QPushButton("Start with config")
+        self.sendCfgBtn = QPushButton(SEND_CFG_BTN_START_MSG)
         self.sendCfgBtn.setEnabled(False)
         self.cfgLayout.addWidget(self.sendCfgBtn, 1, 0, 1, 2)
 
@@ -166,7 +168,7 @@ class Window(QMainWindow):
     def startConnect(self):
         if(self.connectStatus.text() == CONNECT_N_MSG or self.connectStatus.text() == CONNECT_NA_MSG):
             if self.core.connectCom(self.connectStatus) == 0:
-                self.connectBtn.setText("Reset Connection")
+                self.connectBtn.setText(CONNECT_BTN_RESET_MSG)
                 self.sendCfgBtn.setEnabled(True)
                 self.statusBar().showMessage("Connected", STATUS_MSG_DELAY)
             else:
@@ -176,9 +178,10 @@ class Window(QMainWindow):
             self.core.gracefulReset()
             self.connectStatus.setText(CONNECT_N_MSG)
             self.connectBtn.setText(CONNECT_BTN_MSG)
-            self.sendCfgBtn.setEnabled(False)
+            self.sendCfgBtn.setEnabled(False)   # double check
+            self.sendCfgBtn.setText(CONNECT_BTN_MSG)
 
-    # REF : onChangeDemo
+    # REF : onChangeDemo -> core.changeDemo
     def demoChanged(self):
         self.demo_idx = self.demoList.currentIndex()
         self.statusBar().showMessage("Demo : " + self.demoList.currentText(), STATUS_MSG_DELAY)
@@ -196,13 +199,19 @@ class Window(QMainWindow):
             cfgLine.setText(fname)
             self.statusBar().showMessage("cfg set : " + os.path.basename(fname), STATUS_MSG_DELAY)
         except Exception as e:
-            self.cfg_failed_warn = QMessageBox.warning(
-                self, "Cfg selection error", repr(e)
-            )
+            self.cfg_selec_warn(e)
 
-    # REF : core.sendCfg
+    def cfg_selec_warn(self, e: Exception):
+        self.cfg_failed_warn = QMessageBox.warning(
+            self, "Cfg selection error", repr(e)
+        )
+
     def startSensor(self):
         self.statusBar().showMessage("Send config and start")
+        if(self.core.sendCfg()):
+            # disable button before reset
+            self.sendCfgBtn.setDisabled(True)
+            self.sendCfgBtn.setText(SEND_CFG_BTN_RUN_MSG)
 
     def closeEvent(self, event):
         event.accept()
@@ -214,6 +223,7 @@ class Core:
         self.parser = UARTParser()
         self.demo = DEMO_LIST[0]
         self.window = window
+        self.frameTime = 50
 
     def selectFile(self, fLine: QLineEdit):
         try:
@@ -235,7 +245,28 @@ class Core:
             self.cfg_lines = cfg_file.readlines()
             self.parser.cfg = self.cfg_lines
             self.parser.demo = self.demo
-        # TODO : cotinue from line 498
+
+        # TODO verify it really needed
+        # code from next func only useful for plot : from line 498
+
+    # Start with config button call this method
+    # REF : core.sendCfg
+    def sendCfg(self):
+        try:
+            self.cfg_lines
+        except AttributeError:
+            try:
+                self.parseCfg(self.window.filenameCfg.text())
+            except Exception as e:
+                self.window.cfg_selec_warn(e)
+                return False
+
+        self.parser.uartSendCfg(self.cfg_lines)
+        sys.stdout.flush()
+        self.parseTimer.start(self.frameTime)
+        # it will start self.parseData thread
+
+        return True
 
     # Connection Handling
     # REF : connectCom()
@@ -246,8 +277,10 @@ class Core:
         # init thread
         self.uart_thread = parseUartThread(self.parser)
 
-        # TODO thread add : line 632
-        # Notice : timer starts from sendCfg() : line 612
+        # Notice : timer starts from sendCfg() - binds with sendCfgBtn
+        self.parseTimer = QTimer()
+        self.parseTimer.setSingleShot(False)
+        self.parseTimer.timeout.connect(self.parseData)
 
         try:
             if os.name == "nt":
@@ -266,11 +299,15 @@ class Core:
 
     # REF : gracefulReset()
     def gracefulReset(self):
-        # TODO timer and thread stop
+        self.parseTimer.stop()
+        self.uart_thread.stop()
         if self.parser.cliCom is not None:
             self.parser.cliCom.close()
         if self.parser.dataCom is not None:
             self.parser.dataCom.close()
+
+    def parseData(self):
+        self.uart_thread.start(priority=QThread.HighestPriority)
 
     
     # INI Parse
@@ -375,6 +412,53 @@ class UARTParser():
         self.dataCom = serial.Serial(dataCom, 921600, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=0.6)
         self.dataCom.reset_output_buffer()
 
+    # REF : UARTParser.sendCfg
+    def uartSendCfg(self, cfg: list[str]):
+        # remove empty lines from the cfg
+        cfg = [line for line in cfg if line != '\n']
+        # attach \n at the end of each line
+        cfg = [line + '\n' if not line.endswith('\n') else line for line in cfg]
+        # remove commented lines
+        cfg = [line for line in cfg if line[0] != '%']
+
+        for line in cfg:
+            time.sleep(0.03)    # line dealy
+
+            if(self.cliCom.baudrate == 1250000):
+                for char in [*line]:    # [*var] unpacks list into elements
+                    time.sleep(0.001)   # char delay
+                    self.cliCom.write(char.encode())
+            else:
+                self.cliCom.write(line.encode())
+
+            # print ack messages
+            ack = self.cliCom.readline()
+            print(ack, flush=True)
+            ack = self.cliCom.readline()
+            print(ack, flush=True)
+
+            splitLine = line.split()
+            if(splitLine[0] == "baudRate"):
+                try:
+                    self.cliCom.baudrate = int(splitLine[1])
+                except:
+                    sys.exit(1)
+        
+        time.sleep(0.03)
+        self.cliCom.reset_input_buffer()
+
+    def sendLine(self, line: str):
+        if(self.cliCom.baudrate == 1250000):
+            for char in [*line]:
+                time.sleep(0.001)
+                self.cliCom.write(char.encode())
+        else:
+            self.cliCom.write(line.encode())
+        ack = self.cliCom.readline()
+        print(ack)
+        ack = self.cliCom.readline()
+        print(ack)
+
 
 class parseUartThread(QThread):
     fin = Signal(dict)
@@ -391,8 +475,17 @@ class parseUartThread(QThread):
         self.terminate()
 
 
+# TODO consider use or not
+class PeopleTracking():
+    def __init__(self):
+        pass
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     main = Window(title="Batch Maker : Fall Detect")
     main.show()
     sys.exit(app.exec_())
+
+
+# TODO in Uartsendcfg, consecutive b'' check failure and show warning window
+# you have to push physical reset button

@@ -1,23 +1,8 @@
-from PySide2 import QtGui
 from PySide2.QtCore import QTimer, Qt, QThread, Signal
-from PySide2.QtGui import QKeySequence, QIntValidator
 from PySide2.QtWidgets import (
-    QAction,
-    QGridLayout,
-    QGroupBox,
-    QLineEdit,
-    QLabel,
-    QPushButton,
-    QComboBox,
-    QFileDialog,
     QMainWindow,
-    QWidget,
     QApplication,
-    QShortcut,
-    QStatusBar,
-    QMessageBox
 )
-import time
 import sys, os
 
 class Window(QMainWindow):
@@ -28,7 +13,7 @@ class Work():
     def __init__(self):
         self.print_thread = PrintThread()
 
-        self.print_thread.fin.connect(self.print_call)
+        # self.print_thread.fin.connect(self.print_call)
         self.timer = QTimer()
         self.timer.setSingleShot(False)
         self.timer.timeout.connect(self.print_call)
@@ -48,7 +33,7 @@ class PrintThread(QThread):
 
     def run(self):
         print("run")
-        self.fin.emit({})
+        # self.fin.emit({})
         print("finish")
 
     def stop(self):

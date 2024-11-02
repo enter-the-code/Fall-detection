@@ -11,9 +11,11 @@ ui 정의
 | Data COM | data_num_line |
 | connectStatus | connectBtn |
 
+### macro const
 * connectStatus value
     * CONNECT_Y_MSG
     * CONNECT_N_MSG
+    * CONNECT_NA_MSG
 * connectBtn value
     * CONNECT_BTN_MSG
     * CONNECT_BTN_RESET_MSG
@@ -27,6 +29,11 @@ ui 정의
 | --- | --- |
 | filenameCfg | selectCfgBtn |
 | sendCfgBtn | |
+
+### macro const
+* sendCfgBtn value
+    * SEND_CFG_BTN_START_MSG
+    * SEND_CFG_BTN_RUN_MSG
 
 ### Signal
 * selectCfgBtn -> selectCfg(filenameCfg)

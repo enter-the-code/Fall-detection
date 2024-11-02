@@ -504,9 +504,9 @@ class UARTParser():
         outputDict['frameNum'] = frameNum
 
         # pointInfo : X, Y, Z, Doppler, SNR, Noise, Track index
-        outputDict['pointInfo'] = np.zeros((numDetectedObj, 7), np.float64)
+        outputDict['pointCloud'] = np.zeros((numDetectedObj, 7), np.float64)
         # init Track index as no track(255)
-        outputDict['pointInfo'][:, 6] = 255
+        outputDict['pointCloud'][:, 6] = 255
 
         # find and parse all TLVs
         for i in range(numTLVs):
@@ -522,8 +522,8 @@ class UARTParser():
             # print(tlvType)
 
             # TODO
-            # if (tlvType in parserFunctions):
-            #     parserFunctions[tlvType](frameData[:tlvLength], tlvLength, outputDict)
+            if (tlvType in parserFunctions):
+                parserFunctions[tlvType](frameData[:tlvLength], tlvLength, outputDict)
 
             # move to next TLV
             frameData = frameData[tlvLength:]

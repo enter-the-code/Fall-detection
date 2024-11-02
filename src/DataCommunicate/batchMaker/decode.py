@@ -43,7 +43,9 @@ CONNECT_BTN_MSG = "Connect"
 CONNECT_BTN_RESET_MSG = "Reset Connection"
 SEND_CFG_BTN_START_MSG = "Start with config"
 SEND_CFG_BTN_RUN_MSG = "Sensor now Running"
+SEND_CFG_BTN_RST_MSG = "Please Reset"
 DEMO_LIST = ["People Count", "Out of Box"]
+ACK_FAILED_TRESHOLD = 4
 STATUS_MSG_DELAY = 2000
 
 
@@ -202,9 +204,16 @@ class Window(QMainWindow):
             self.cfg_selec_warn(e)
 
     def cfg_selec_warn(self, e: Exception):
-        self.cfg_failed_warn = QMessageBox.warning(
+        self.cfg_select_warn_box = QMessageBox.warning(
             self, "Cfg selection error", repr(e)
         )
+
+    def reset_warn(self):
+        self.reset_warn_box = QMessageBox.warning(
+            self, "ACK receive failed", "Need to Reset Sensor with physical button"
+        )
+        self.sendCfgBtn.setDisabled(True)
+        self.sendCfgBtn.setText(SEND_CFG_BTN_RST_MSG)
 
     def startSensor(self):
         self.statusBar().showMessage("Send config and start")
@@ -261,7 +270,10 @@ class Core:
                 self.window.cfg_selec_warn(e)
                 return False
 
-        self.parser.uartSendCfg(self.cfg_lines)
+        if not self.parser.uartSendCfg(self.cfg_lines):
+            self.window.reset_warn()
+            sys.stdout.flush()
+            return
         sys.stdout.flush()
         self.parseTimer.start(self.frameTime)
         # it will start self.parseData thread
@@ -414,6 +426,8 @@ class UARTParser():
 
     # REF : UARTParser.sendCfg
     def uartSendCfg(self, cfg: list[str]):
+        failed_cnt = 0
+
         # remove empty lines from the cfg
         cfg = [line for line in cfg if line != '\n']
         # attach \n at the end of each line
@@ -422,6 +436,9 @@ class UARTParser():
         cfg = [line for line in cfg if line[0] != '%']
 
         for line in cfg:
+            if(failed_cnt >= ACK_FAILED_TRESHOLD):
+                # need to reset sensor
+                return False
             time.sleep(0.03)    # line dealy
 
             if(self.cliCom.baudrate == 1250000):
@@ -434,8 +451,12 @@ class UARTParser():
             # print ack messages
             ack = self.cliCom.readline()
             print(ack, flush=True)
+            if(ack == b''):
+                failed_cnt += 1
             ack = self.cliCom.readline()
             print(ack, flush=True)
+            if(ack == b''):
+                failed_cnt += 1
 
             splitLine = line.split()
             if(splitLine[0] == "baudRate"):
@@ -446,6 +467,8 @@ class UARTParser():
         
         time.sleep(0.03)
         self.cliCom.reset_input_buffer()
+
+        return True
 
     def sendLine(self, line: str):
         if(self.cliCom.baudrate == 1250000):
@@ -485,7 +508,3 @@ if __name__ == '__main__':
     main = Window(title="Batch Maker : Fall Detect")
     main.show()
     sys.exit(app.exec_())
-
-
-# TODO in Uartsendcfg, consecutive b'' check failure and show warning window
-# you have to push physical reset button

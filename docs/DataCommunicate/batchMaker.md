@@ -34,6 +34,7 @@ ui 정의
 * sendCfgBtn value
     * SEND_CFG_BTN_START_MSG
     * SEND_CFG_BTN_RUN_MSG
+    * SEND_CFG_BTN_RST_MSG
 
 ### Signal
 * selectCfgBtn -> selectCfg(filenameCfg)

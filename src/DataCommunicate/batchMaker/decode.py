@@ -31,22 +31,71 @@ from PySide2.QtWidgets import (
 # ini config imports
 from configparser import ConfigParser, NoOptionError
 
+# local imports
+from tlv_defines import *
+from parseTLVs import *
+
+# parser functions list
+parserFunctions = {
+    # 3D People Tracking
+    MMWDEMO_OUTPUT_MSG_TRACKERPROC_3D_TARGET_LIST:          parseTrackTLV,
+    MMWDEMO_OUTPUT_MSG_TRACKERPROC_TARGET_HEIGHT:           parseTrackHeightTLV,
+    MMWDEMO_OUTPUT_MSG_TRACKERPROC_TARGET_INDEX:            parseTargetIndexTLV,
+    MMWDEMO_OUTPUT_MSG_COMPRESSED_POINTS:                   parseCompressedSphericalPointCloudTLV,
+    # Others
+    # MMWDEMO_OUTPUT_MSG_DETECTED_POINTS:                     parsePointCloudTLV,
+    # MMWDEMO_OUTPUT_MSG_RANGE_PROFILE:                       parseRangeProfileTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_RANGE_PROFILE_MAJOR:             parseRangeProfileTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_RANGE_PROFILE_MINOR:             parseRangeProfileTLV,
+    # MMWDEMO_OUTPUT_MSG_DETECTED_POINTS_SIDE_INFO:           parseSideInfoTLV,
+    # MMWDEMO_OUTPUT_MSG_SPHERICAL_POINTS:                    parseSphericalPointCloudTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_TARGET_LIST:                     parseTrackTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_TARGET_INDEX:                    parseTargetIndexTLV,
+    # MMWDEMO_OUTPUT_MSG_OCCUPANCY_STATE_MACHINE:             parseOccStateMachTLV,
+    # MMWDEMO_OUTPUT_MSG_VITALSIGNS:                          parseVitalSignsTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_DETECTED_POINTS:                 parsePointCloudExtTLV,
+    # MMWDEMO_OUTPUT_MSG_GESTURE_FEATURES_6843:               parseGestureFeaturesTLV,
+    # MMWDEMO_OUTPUT_MSG_GESTURE_OUTPUT_PROB_6843:            parseGestureProbTLV6843,
+    # MMWDEMO_OUTPUT_MSG_GESTURE_CLASSIFIER_6432:             parseGestureClassifierTLV6432,
+    # MMWDEMO_OUTPUT_EXT_MSG_ENHANCED_PRESENCE_INDICATION:    parseEnhancedPresenceInfoTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_CLASSIFIER_INFO:                 parseClassifierTLV,
+    # MMWDEMO_OUTPUT_MSG_SURFACE_CLASSIFICATION:              parseSurfaceClassificationTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_VELOCITY:                        parseVelocityTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_RX_CHAN_COMPENSATION_INFO:       parseRXChanCompTLV,
+    # MMWDEMO_OUTPUT_MSG_EXT_STATS:                           parseExtStatsTLV,
+    # MMWDEMO_OUTPUT_MSG_GESTURE_FEATURES_6432:               parseGestureFeaturesTLV6432,
+    # MMWDEMO_OUTPUT_MSG_GESTURE_PRESENCE_x432:               parseGesturePresenceTLV6432,
+    # MMWDEMO_OUTPUT_MSG_GESTURE_PRESENCE_THRESH_x432:        parsePresenceThreshold,
+    # MMWDEMO_OUTPUT_EXT_MSG_STATS_BSD:                       parseExtStatsTLVBSD,
+    # MMWDEMO_OUTPUT_EXT_MSG_TARGET_LIST_2D_BSD:              parseTrackTLV2D,
+    # MMWDEMO_OUTPUT_EXT_MSG_CAM_TRIGGERS:                    parseCamTLV,
+    # MMWDEMO_OUTPUT_EXT_MSG_POINT_CLOUD_ANTENNA_SYMBOLS:     parseAntSymbols,
+    # MMWDEMO_OUTPUT_EXT_MSG_ADC_SAMPLES:                     parseADCSamples,
+    # MMWDEMO_OUTPUT_EXT_MSG_MODE_SWITCH_INFO:                parseModeSwitchTLV
+}
 
 # MACRO constants
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INI_FILE_NAME = "batch_maker.ini"
 INI_PATH = os.path.join(BASE_DIR, INI_FILE_NAME)
+
 CONNECT_N_MSG = "Not Connected"
 CONNECT_Y_MSG = "Connected"
 CONNECT_NA_MSG = "Unable to Connect"
+
 CONNECT_BTN_MSG = "Connect"
 CONNECT_BTN_RESET_MSG = "Reset Connection"
+
 SEND_CFG_BTN_START_MSG = "Start with config"
 SEND_CFG_BTN_RUN_MSG = "Sensor now Running"
 SEND_CFG_BTN_RST_MSG = "Please Reset"
+
 DEMO_LIST = ["People Count", "Out of Box"]
-ACK_FAILED_TRESHOLD = 4
+
+ACK_FAILED_TRESHOLD = 2
 STATUS_MSG_DELAY = 2000
+
+UART_MAGIC_WORD = bytearray(b'\x02\x01\x04\x03\x06\x05\x08\x07')
 
 
 class Window(QMainWindow):
@@ -166,7 +215,7 @@ class Window(QMainWindow):
         self.sendCfgBtn.clicked.connect(self.startSensor)
 
     
-    # REF : onConnect(self) - DONE
+    # REF : onConnect(self)
     def startConnect(self):
         if(self.connectStatus.text() == CONNECT_N_MSG or self.connectStatus.text() == CONNECT_NA_MSG):
             if self.core.connectCom(self.connectStatus) == 0:
@@ -289,6 +338,7 @@ class Core:
         # init thread
         self.uart_thread = parseUartThread(self.parser)
 
+        self.uart_thread.fin.connect(self.convert_uart_output)
         # Notice : timer starts from sendCfg() - binds with sendCfgBtn
         self.parseTimer = QTimer()
         self.parseTimer.setSingleShot(False)
@@ -308,6 +358,12 @@ class Core:
             return -1
 
         return 0
+    
+    def convert_uart_output(self, outputDict: dict):
+        # REF : core.parser()
+        # TODO print test or txt conv test
+        # TODO attach it to csv convert class
+        pass
 
     # REF : gracefulReset()
     def gracefulReset(self):
@@ -394,7 +450,35 @@ class UARTParser():
     def readAndParseUartCOMPort(self):
         self.fail = 0
         index = 0
-        # TODO : gui_parser.py line 71
+
+        magicByte = self.dataCom.read(1)
+        frameData = bytearray(b'')
+
+        while (1):
+            if (len(magicByte) < 1):
+                # data receive failed, retry
+                magicByte = self.dataCom.read(1)
+            elif (magicByte[0] == UART_MAGIC_WORD[index]):
+                index += 1
+                frameData.append(magicByte[0])
+                if (index == 8):    # full magic word found
+                    break
+                magicByte = self.dataCom.read(1)
+
+        versionBytes = self.dataCom.read(4)
+        frameData += bytearray(versionBytes)
+
+        lengthBytes = self.dataCom.read(4)
+        frameData += bytearray(lengthBytes)
+        frameLength = int.from_bytes(lengthBytes, byteorder='little')
+        # subtract already readed bytes : magic word, version ...
+        frameLength -= 16
+
+        frameData += bytearray(self.dataCom.read(frameLength))
+
+        outputDict = self.parseStandardFrame(frameData)
+
+        return outputDict
     
     def parseStandardFrame(self, frameData):
         headerStruct = 'Q8I'    # UART binary format what ti sensor often uses
@@ -417,7 +501,40 @@ class UARTParser():
         frameData = frameData[frameHeaderLen:]
         totalLenCheck += frameHeaderLen
 
-        # TODO : parseFrame.py line 89
+        outputDict['frameNum'] = frameNum
+
+        # pointInfo : X, Y, Z, Doppler, SNR, Noise, Track index
+        outputDict['pointInfo'] = np.zeros((numDetectedObj, 7), np.float64)
+        # init Track index as no track(255)
+        outputDict['pointInfo'][:, 6] = 255
+
+        # find and parse all TLVs
+        for i in range(numTLVs):
+            try:
+                tlvType, tlvLength = struct.unpack('2I', frameData[:tlvHeaderLength])
+                frameData = frameData[tlvHeaderLength:]
+                totalLenCheck += tlvHeaderLength
+            except:
+                # parsing error, ignore frame
+                outputDict['error'] = 2
+                return {}
+            
+            # print(tlvType)
+
+            # TODO
+            # if (tlvType in parserFunctions):
+            #     parserFunctions[tlvType](frameData[:tlvLength], tlvLength, outputDict)
+
+            # move to next TLV
+            frameData = frameData[tlvLength:]
+            totalLenCheck += tlvLength
+        
+        totalLenCheck = 32 * math.ceil(totalLenCheck / 32)
+        if (totalLenCheck != totalPacketLen):
+            # subsequent frames may dropped due to transmission error
+            outputDict['error'] = 3
+        
+        return outputDict
 
     def connectComPort(self, cliCom, dataCom):
         self.cliCom = serial.Serial(cliCom, 115200, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=0.6)
@@ -453,10 +570,10 @@ class UARTParser():
             print(ack, flush=True)
             if(ack == b''):
                 failed_cnt += 1
+            else:
+                failed_cnt = 0
             ack = self.cliCom.readline()
             print(ack, flush=True)
-            if(ack == b''):
-                failed_cnt += 1
 
             splitLine = line.split()
             if(splitLine[0] == "baudRate"):

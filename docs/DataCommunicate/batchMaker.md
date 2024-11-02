@@ -44,3 +44,12 @@ ui 정의
 내부 기능 정의
 * ini 파일로 기존값 저장
 * 파일 선택, 파싱
+
+# tlv_defines.py
+## 3D People Tracking
+### TLV Header type
+* 1020 : point cloud
+* 1010 : target object list
+* 1011 : target index
+* 1012 : target height
+* 1021 : presence indication - unused TLV

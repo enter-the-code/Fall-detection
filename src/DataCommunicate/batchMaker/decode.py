@@ -751,7 +751,7 @@ class TableConvert():
                         revised_row = {
                             "frameNum": row["frameNum"],
                             "pointNum": num,
-                            "index": row_ary[num],
+                            "index": int(row_ary[num]),
                         }
                         writer.writerow(revised_row)
 

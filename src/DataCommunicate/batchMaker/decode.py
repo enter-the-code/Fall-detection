@@ -8,6 +8,8 @@ import math
 import datetime
 import numpy as np
 import struct
+import copy
+import ast
 
 # PySide imports
 from PySide2 import QtGui
@@ -283,7 +285,6 @@ class Window(QMainWindow):
     def closeEvent(self, event):
         event.accept()
         self.core.ini_save(self.iniParser)
-        # TODO save data : stop timer and save
         QApplication.quit()
 
 class Core:
@@ -465,7 +466,7 @@ class UARTParser():
     # self.parserType는 DoubleCOMPort로 고정
 
     def readAndParseUartCOMPort(self):
-        self.fail = 0
+        fail = 0
         index = 0
 
         magicByte = self.dataCom.read(1)
@@ -473,6 +474,9 @@ class UARTParser():
 
         while (1):
             if (len(magicByte) < 1):
+                if(fail > 10):
+                    return {}
+                fail += 1
                 # data receive failed, retry
                 magicByte = self.dataCom.read(1)
             elif (magicByte[0] == UART_MAGIC_WORD[index]):
@@ -481,6 +485,12 @@ class UARTParser():
                 if (index == 8):    # full magic word found
                     break
                 magicByte = self.dataCom.read(1)
+            else:
+                if (index == 0):
+                    magicByte = self.dataCom.read(1)
+                # reset
+                index = 0
+                frameData = bytearray(b'')
 
         versionBytes = self.dataCom.read(4)
         frameData += bytearray(versionBytes)
@@ -616,21 +626,6 @@ class UARTParser():
         print(ack)
 
 
-class parseUartThread(QThread):
-    fin = Signal(dict)
-
-    def __init__(self, uParser: UARTParser):
-            QThread.__init__(self)
-            self.parser = uParser
-
-    def run(self):
-        outputDict = self.parser.readAndParseUartCOMPort()
-        self.fin.emit(outputDict)
-
-    def stop(self):
-        self.terminate()
-
-
 class TableConvert():
     def __init__(self, window: Window):
         self.window = window
@@ -702,8 +697,8 @@ class TableConvert():
         now = datetime.datetime.now()
         sec_section = now.second // TIME_DIV_SEC
         formatted_time = f"{now.year}_{now.month:02}_{now.day:02}_{now.hour:02}_{now.minute:02}_{sec_section}"
+        print("file save : " + formatted_time)
         
-        self.peopleTrackSaveCloud(formatted_time)
         for save in self.demo_match[self.window.demoList.currentText()]:
             save(formatted_time)
 
@@ -720,7 +715,10 @@ class TableConvert():
                 fieldnames = ["frameNum", "pointNum", "Range", "Azimuth", "Elevation", "Doppler", "SNR"]
                 writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writeheader()
-                for row in self.dict_list_cloud:
+
+                copy_list = copy.deepcopy(self.dict_list_cloud)
+                self.dict_list_cloud.clear()
+                for row in copy_list:
                     for num in range(int(row["numDetectedPoints"])):
                         revised_row = {
                             "frameNum": row["frameNum"],
@@ -729,11 +727,9 @@ class TableConvert():
                             "Azimuth": row["pointCloud"][num][1],
                             "Elevation": row["pointCloud"][num][2],
                             "Doppler": row["pointCloud"][num][3],
-                            "SNR": row["pointCloud"][num][4]
+                            "SNR": row["pointCloud"][num][4],
                         }
                         writer.writerow(revised_row)
-
-            self.dict_list_cloud.clear()
 
     def peopleTrackSaveTidx(self, formatted_time: str):
         if self.dict_list_trackIdx:
@@ -743,11 +739,21 @@ class TableConvert():
                 fname = "TrackIdx_" + formatted_time + "a.csv"
                 fpath = os.path.join(DATA_DIR, fname)
             with open(fpath, "w", newline="") as file:
-                writer = csv.DictWriter(file, fieldnames=self.dict_list_trackIdx[0].keys())
+                fieldnames = ["frameNum", "pointNum", "index"]
+                writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(self.dict_list_trackIdx)
 
-            self.dict_list_trackIdx.clear()
+                copy_list = copy.deepcopy(self.dict_list_trackIdx)
+                self.dict_list_trackIdx.clear()
+                for row in copy_list:
+                    row_ary = row["trackIndexes"]
+                    for num in range(row_ary.size):
+                        revised_row = {
+                            "frameNum": row["frameNum"],
+                            "pointNum": num,
+                            "index": row_ary[num],
+                        }
+                        writer.writerow(revised_row)
 
     def peopleTrackSaveHeight(self, formatted_time: str):
         if self.dict_list_height:
@@ -757,11 +763,31 @@ class TableConvert():
                 fname = "Height_" + formatted_time + "a.csv"
                 fpath = os.path.join(DATA_DIR, fname)
             with open(fpath, "w", newline="") as file:
-                writer = csv.DictWriter(file, fieldnames=self.dict_list_height[0].keys())
+                fieldnames = ["frameNum", "pointNum", "Target ID", "Xpos", "Ypos", "Zpos", "Xvel", "Yvel", "Zvel", "Xacc", "Yacc", "Zacc", "Gain", "confidence level"]
+                writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(self.dict_list_height)
 
-            self.dict_list_height.clear()
+                copy_list = copy.deepcopy(self.dict_list_height)
+                self.dict_list_height.clear()
+                for row in copy_list:
+                    for num in range(int(row["numDetectedTracks"])):
+                        revised_row = {
+                            "frameNum": row["frameNum"],
+                            "pointNum": num,
+                            "Target ID": int(row["trackData"][num][0]),
+                            "Xpos": row["trackData"][num][1],
+                            "Ypos": row["trackData"][num][2],
+                            "Zpos": row["trackData"][num][3],
+                            "Xvel": row["trackData"][num][4],
+                            "Yvel": row["trackData"][num][5],
+                            "Zvel": row["trackData"][num][6],
+                            "Xacc": row["trackData"][num][7],
+                            "Yacc": row["trackData"][num][8],
+                            "Zacc": row["trackData"][num][9],
+                            "Gain": row["trackData"][num][10],
+                            "confidence level": row["trackData"][num][11],
+                        }
+                        writer.writerow(revised_row)
 
     def peopleTrackSaveTrack(self, formatted_time: str):
         if self.dict_list_track:
@@ -771,11 +797,41 @@ class TableConvert():
                 fname = "TrackIdx_" + formatted_time + "a.csv"
                 fpath = os.path.join(DATA_DIR, fname)
             with open(fpath, "w", newline="") as file:
-                writer = csv.DictWriter(file, fieldnames=self.dict_list_track[0].keys())
+                fieldnames = ["frameNum", "pointNum", "Target ID", "maxZ", "minZ"]
+                writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(self.dict_list_track)
+                
+                copy_list = copy.deepcopy(self.dict_list_track)
+                self.dict_list_track.clear()
+                for row in copy_list:
+                    for num in range(int(row["numDetectedHeights"])):
+                        revised_row = {
+                            "frameNum": row["frameNum"],
+                            "pointNum": num,
+                            "Target ID": int(row["heightData"][num][0]),
+                            "maxZ": row["heightData"][num][1],
+                            "minZ": row["heightData"][num][2],
+                        }
+                        writer.writerow(revised_row)
 
             self.dict_list_track.clear()
+
+
+# Thread Define
+class parseUartThread(QThread):
+    fin = Signal(dict)
+
+    def __init__(self, uParser: UARTParser):
+            QThread.__init__(self)
+            self.parser = uParser
+
+    def run(self):
+        outputDict = self.parser.readAndParseUartCOMPort()
+        self.fin.emit(outputDict)
+
+    def stop(self):
+        self.terminate()
+
 
 class saveTimerThread(QThread):
     fin = Signal()

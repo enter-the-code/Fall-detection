@@ -9,7 +9,6 @@ import datetime
 import numpy as np
 import struct
 import copy
-import ast
 
 # PySide imports
 from PySide2 import QtGui
@@ -463,7 +462,6 @@ class UARTParser():
     def __init__(self):
         self.binData = bytearray(0)
         self.uartCounter = 0
-    # self.parserType는 DoubleCOMPort로 고정
 
     def readAndParseUartCOMPort(self):
         fail = 0
@@ -486,9 +484,9 @@ class UARTParser():
                     break
                 magicByte = self.dataCom.read(1)
             else:
+                # failed to find next magicByte : do reset
                 if (index == 0):
                     magicByte = self.dataCom.read(1)
-                # reset
                 index = 0
                 frameData = bytearray(b'')
 
@@ -545,8 +543,6 @@ class UARTParser():
                 # parsing error, ignore frame
                 outputDict['error'] = 2
                 return {}
-            
-            # print(tlvType)
 
             if (tlvType in parserFunctions):
                 parserFunctions[tlvType](frameData[:tlvLength], tlvLength, outputDict)

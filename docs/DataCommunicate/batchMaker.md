@@ -44,6 +44,7 @@ ui 정의
 내부 기능 정의
 * ini 파일로 기존값 저장
 * 파일 선택, 파싱
+* demoConvertDict에 demoList와 csv table converter 매칭을 지정
 
 # tlv_defines.py
 ## 3D People Tracking

@@ -79,6 +79,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INI_FILE_NAME = "batch_maker.ini"
 INI_PATH = os.path.join(BASE_DIR, INI_FILE_NAME)
 
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
 CONNECT_N_MSG = "Not Connected"
 CONNECT_Y_MSG = "Connected"
 CONNECT_NA_MSG = "Unable to Connect"
@@ -137,8 +139,11 @@ class Window(QMainWindow):
         self.statusBar().addWidget(QLabel("Status Description"))
 
 
-        # TODO : fixed size set
+        # window size range setting
         self.setMinimumWidth(350)
+        self.setMaximumWidth(600)
+        self.setMinimumHeight(260)
+        self.setMaximumHeight(280)
 
         # Shortcut
         self.shortcut = QShortcut(QKeySequence("Ctrl+W"), self) # ctrl+W to close program
@@ -282,6 +287,13 @@ class Core:
         self.demo = DEMO_LIST[0]
         self.window = window
         self.frameTime = 50
+        self.converter = TableConvert()
+
+        # Converter Dictionary
+        self.demoConvertDict = {
+            DEMO_LIST[0]: self.converter.peopleTrack,
+            DEMO_LIST[1]: self.converter.outOfBox,
+        }
 
     def selectFile(self, fLine: QLineEdit):
         try:
@@ -303,9 +315,6 @@ class Core:
             self.cfg_lines = cfg_file.readlines()
             self.parser.cfg = self.cfg_lines
             self.parser.demo = self.demo
-
-        # TODO verify it really needed
-        # code from next func only useful for plot : from line 498
 
     # Start with config button call this method
     # REF : core.sendCfg
@@ -360,10 +369,8 @@ class Core:
         return 0
     
     def convert_uart_output(self, outputDict: dict):
-        # REF : core.parser()
-        # TODO print test or txt conv test
-        # TODO attach it to csv convert class
-        pass
+        # find matching (csv convert) function
+        self.demoConvertDict[self.window.demoList.currentText()](outputDict)
 
     # REF : gracefulReset()
     def gracefulReset(self):
@@ -521,7 +528,6 @@ class UARTParser():
             
             # print(tlvType)
 
-            # TODO
             if (tlvType in parserFunctions):
                 parserFunctions[tlvType](frameData[:tlvLength], tlvLength, outputDict)
 
@@ -615,9 +621,38 @@ class parseUartThread(QThread):
         self.terminate()
 
 
-# TODO consider use or not
-class PeopleTracking():
+class TableConvert():
     def __init__(self):
+        # path check
+        if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR, exist_ok=True)
+
+        # TODO timer thread
+        pass
+
+    def peopleTrack(self, outputDict):
+        if outputDict["error"] != 0:
+            return
+        
+        if "numDetectedPoints" in outputDict:
+            points = outputDict["numDetectedPoints"]
+            if points == 0 :
+                return
+            print(outputDict)
+        elif "trackIndexes" in outputDict:
+            print(outputDict)
+        elif "heightData" in outputDict:
+            heigths = outputDict["numDetectedHeights"]
+            if heigths == 0 :
+                return
+            print(outputDict)
+        elif "trackData" in outputDict:
+            tracks = outputDict["numDetectedTracks"]
+            if tracks == 0 :
+                return
+            print(outputDict)
+
+    def outOfBox(self, outputDict):
         pass
 
 if __name__ == '__main__':

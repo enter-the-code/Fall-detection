@@ -717,9 +717,21 @@ class TableConvert():
                 fname = "cloud_" + formatted_time + "a.csv"
                 fpath = os.path.join(DATA_DIR, fname)
             with open(fpath, "w", newline="") as file:
-                writer = csv.DictWriter(file, fieldnames=self.dict_list_cloud[0].keys())
+                fieldnames = ["frameNum", "pointNum", "Range", "Azimuth", "Elevation", "Doppler", "SNR"]
+                writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(self.dict_list_cloud)
+                for row in self.dict_list_cloud:
+                    for num in range(int(row["numDetectedPoints"])):
+                        revised_row = {
+                            "frameNum": row["frameNum"],
+                            "pointNum": num,
+                            "Range": row["pointCloud"][num][0],
+                            "Azimuth": row["pointCloud"][num][1],
+                            "Elevation": row["pointCloud"][num][2],
+                            "Doppler": row["pointCloud"][num][3],
+                            "SNR": row["pointCloud"][num][4]
+                        }
+                        writer.writerow(revised_row)
 
             self.dict_list_cloud.clear()
 

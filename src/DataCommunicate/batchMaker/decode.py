@@ -292,7 +292,7 @@ class Core:
         self.demo = DEMO_LIST[0]
         self.window = window
         self.frameTime = 50
-        self.converter = TableConvert()
+        self.converter = TableConvert(window)
 
         # Converter Dictionary
         self.demoConvertDict = {
@@ -632,7 +632,9 @@ class parseUartThread(QThread):
 
 
 class TableConvert():
-    def __init__(self):
+    def __init__(self, window: Window):
+        self.window = window
+
         # path check
         if not os.path.exists(DATA_DIR):
             os.makedirs(DATA_DIR, exist_ok=True)
@@ -650,7 +652,24 @@ class TableConvert():
         self.dict_list_height = []
         self.dict_list_track = []
 
+        # demo-method matching list
+        self.demo_match = {
+            # people track
+            DEMO_LIST[0]: [
+                self.peopleTrackSaveCloud,
+                self.peopleTrackSaveTidx,
+                self.peopleTrackSaveHeight,
+                self.peopleTrackSaveTrack,
+            ],
+            # out of box
+            DEMO_LIST[1]: [
+
+            ]
+        }
+
     def peopleTrack(self, outputDict):
+        if "error" not in outputDict:
+            return
         if outputDict["error"] != 0:
             return
         
@@ -685,20 +704,66 @@ class TableConvert():
         formatted_time = f"{now.year}_{now.month:02}_{now.day:02}_{now.hour:02}_{now.minute:02}_{sec_section}"
         
         self.peopleTrackSaveCloud(formatted_time)
+        for save in self.demo_match[self.window.demoList.currentText()]:
+            save(formatted_time)
 
 
-        # if same file already exits, add contents
-
+    # People Track Demo's save methods
     def peopleTrackSaveCloud(self, formatted_time: str):
         if self.dict_list_cloud:
             fname = "cloud_" + formatted_time + ".csv"
             fpath = os.path.join(DATA_DIR, fname)
+            if os.path.exists(fpath):
+                fname = "cloud_" + formatted_time + "a.csv"
+                fpath = os.path.join(DATA_DIR, fname)
             with open(fpath, "w", newline="") as file:
                 writer = csv.DictWriter(file, fieldnames=self.dict_list_cloud[0].keys())
                 writer.writeheader()
                 writer.writerows(self.dict_list_cloud)
 
             self.dict_list_cloud.clear()
+
+    def peopleTrackSaveTidx(self, formatted_time: str):
+        if self.dict_list_trackIdx:
+            fname = "TrackIdx_" + formatted_time + ".csv"
+            fpath = os.path.join(DATA_DIR, fname)
+            if os.path.exists(fpath):
+                fname = "TrackIdx_" + formatted_time + "a.csv"
+                fpath = os.path.join(DATA_DIR, fname)
+            with open(fpath, "w", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=self.dict_list_trackIdx[0].keys())
+                writer.writeheader()
+                writer.writerows(self.dict_list_trackIdx)
+
+            self.dict_list_trackIdx.clear()
+
+    def peopleTrackSaveHeight(self, formatted_time: str):
+        if self.dict_list_height:
+            fname = "Height_" + formatted_time + ".csv"
+            fpath = os.path.join(DATA_DIR, fname)
+            if os.path.exists(fpath):
+                fname = "Height_" + formatted_time + "a.csv"
+                fpath = os.path.join(DATA_DIR, fname)
+            with open(fpath, "w", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=self.dict_list_height[0].keys())
+                writer.writeheader()
+                writer.writerows(self.dict_list_height)
+
+            self.dict_list_height.clear()
+
+    def peopleTrackSaveTrack(self, formatted_time: str):
+        if self.dict_list_track:
+            fname = "TrackIdx_" + formatted_time + ".csv"
+            fpath = os.path.join(DATA_DIR, fname)
+            if os.path.exists(fpath):
+                fname = "TrackIdx_" + formatted_time + "a.csv"
+                fpath = os.path.join(DATA_DIR, fname)
+            with open(fpath, "w", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=self.dict_list_track[0].keys())
+                writer.writeheader()
+                writer.writerows(self.dict_list_track)
+
+            self.dict_list_track.clear()
 
 class saveTimerThread(QThread):
     fin = Signal()

@@ -9,3 +9,6 @@
 
 # pycache
 *.pyc
+
+# csv tables
+*.csv

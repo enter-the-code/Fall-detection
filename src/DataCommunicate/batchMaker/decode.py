@@ -1,4 +1,6 @@
 import time
+from datetime import datetime
+import csv
 import os
 import sys
 import serial
@@ -12,7 +14,6 @@ from PySide2 import QtGui
 from PySide2.QtCore import QTimer, Qt, QThread, Signal
 from PySide2.QtGui import QKeySequence, QIntValidator
 from PySide2.QtWidgets import (
-    QAction,
     QGridLayout,
     QGroupBox,
     QLineEdit,
@@ -98,6 +99,9 @@ ACK_FAILED_TRESHOLD = 2
 STATUS_MSG_DELAY = 2000
 
 UART_MAGIC_WORD = bytearray(b'\x02\x01\x04\x03\x06\x05\x08\x07')
+
+TIME_DIV_SEC = 10
+TIME_DIV_MSEC = TIME_DIV_SEC * 1000
 
 
 class Window(QMainWindow):
@@ -279,6 +283,7 @@ class Window(QMainWindow):
     def closeEvent(self, event):
         event.accept()
         self.core.ini_save(self.iniParser)
+        # TODO save data : stop timer and save
         QApplication.quit()
 
 class Core:
@@ -333,8 +338,9 @@ class Core:
             sys.stdout.flush()
             return
         sys.stdout.flush()
-        self.parseTimer.start(self.frameTime)
         # it will start self.parseData thread
+        self.parseTimer.start(self.frameTime)
+        self.converter.saveTimer.start(TIME_DIV_MSEC)
 
         return True
 
@@ -376,6 +382,10 @@ class Core:
     def gracefulReset(self):
         self.parseTimer.stop()
         self.uart_thread.stop()
+        # save timer
+        self.converter.saveTimer.stop()
+        self.converter.saveTimerThread.stop()
+
         if self.parser.cliCom is not None:
             self.parser.cliCom.close()
         if self.parser.dataCom is not None:
@@ -627,8 +637,18 @@ class TableConvert():
         if not os.path.exists(DATA_DIR):
             os.makedirs(DATA_DIR, exist_ok=True)
 
-        # TODO timer thread
-        pass
+        # timer thread to save table periodically
+        self.saveTimerThread = saveTimerThread(self)
+        self.saveTimer = QTimer()
+        self.saveTimer.setSingleShot(False)
+        self.saveTimer.timeout.connect(self.saveTimerConnect)
+        self.saveTimerThread.fin.connect(self.saveTable)
+
+        # dictionary list
+        self.dict_list_cloud = []
+        self.dict_list_trackIdx = []
+        self.dict_list_height = []
+        self.dict_list_track = []
 
     def peopleTrack(self, outputDict):
         if outputDict["error"] != 0:
@@ -638,22 +658,62 @@ class TableConvert():
             points = outputDict["numDetectedPoints"]
             if points == 0 :
                 return
-            print(outputDict)
+            self.dict_list_cloud.append(outputDict)
         elif "trackIndexes" in outputDict:
-            print(outputDict)
+            self.dict_list_trackIdx.append(outputDict)
         elif "heightData" in outputDict:
             heigths = outputDict["numDetectedHeights"]
             if heigths == 0 :
                 return
-            print(outputDict)
+            self.dict_list_height.append(outputDict)
         elif "trackData" in outputDict:
             tracks = outputDict["numDetectedTracks"]
             if tracks == 0 :
                 return
-            print(outputDict)
+            self.dict_list_track.append(outputDict)
 
     def outOfBox(self, outputDict):
+        # not implemented yet
         pass
+
+    def saveTimerConnect(self):
+        self.saveTimerThread.start(priority=QThread.NormalPriority)
+
+    def saveTable(self):
+        now = datetime.datetime.now()
+        sec_section = now.second // TIME_DIV_SEC
+        formatted_time = f"{now.year}_{now.month:02}_{now.day:02}_{now.hour:02}_{now.minute:02}_{sec_section}"
+        
+        self.peopleTrackSaveCloud(formatted_time)
+
+
+        # if same file already exits, add contents
+
+    def peopleTrackSaveCloud(self, formatted_time: str):
+        if self.dict_list_cloud:
+            fname = "cloud_" + formatted_time + ".csv"
+            fpath = os.path.join(DATA_DIR, fname)
+            with open(fpath, "w", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=self.dict_list_cloud[0].keys())
+                writer.writeheader()
+                writer.writerows(self.dict_list_cloud)
+
+            self.dict_list_cloud.clear()
+
+class saveTimerThread(QThread):
+    fin = Signal()
+
+    def __init__(self, converter: TableConvert):
+            QThread.__init__(self)
+            self.formatted_time = ""
+            self.conv = converter
+
+    def run(self):
+        self.fin.emit()
+
+    def stop(self):
+        self.conv.saveTable()
+        self.terminate()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

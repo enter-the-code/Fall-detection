@@ -6,3 +6,6 @@
 
 # config file
 *.ini
+
+# pycache
+*.pyc

@@ -133,6 +133,7 @@ class PeopleTracking(Plot3D, Plot1D):
                                 if(self.displayFallDet.checkState() == 2):
                                     # Compute the fall detection results for each object
                                     fallDetectionDisplayResults = self.fallDetection.step(outputDict['heightData'], outputDict['trackData'])
+                                    self.gui.update_fall_status(fallDetectionDisplayResults)
                                     if (fallDetectionDisplayResults[tid] > 0): 
                                         height_str = height_str + " FALL DETECTED"
                                 self.coordStr[tid].setText(height_str)
@@ -219,34 +220,77 @@ class PeopleTracking(Plot3D, Plot1D):
     def fallDetDisplayChanged(self, state):
         if state:
             self.fallDetectionOptionsBox.setVisible(True)
+            self.left_panel.setVisible(True)
+            self.right_panel.setVisible(True)
         else:
             self.fallDetectionOptionsBox.setVisible(False)
+            self.left_panel.setVisible(False)
+            self.right_panel.setVisible(False)
 
     def updateFallDetectionSensitivity(self):
         self.fallDetection.setFallSensitivity(((self.fallDetSlider.value() / self.fallDetSlider.maximum()) * 0.4) + 0.4) # Range from 0.4 to 0.8
 
     def initFallDetectPane(self):
-        self.fallDetectionOptionsBox = QGroupBox('Fall Detection Sensitivity')
-        self.fallDetLayout = QGridLayout()
-        self.fallDetSlider = FallDetectionSliderClass(Qt.Horizontal)
-        self.fallDetSlider.setTracking(True)
-        self.fallDetSlider.setTickPosition(QSlider.TicksBothSides)
-        self.fallDetSlider.setTickInterval(10)
-        self.fallDetSlider.setRange(0, 100)
-        self.fallDetSlider.setSliderPosition(50)
-        self.fallDetSlider.valueChanged.connect(self.updateFallDetectionSensitivity)
-        self.lessSensitiveLabel = QLabel("Less Sensitive")
-        self.fallDetLayout.addWidget(self.lessSensitiveLabel,0,0,1,1)
-        self.moreSensitiveLabel = QLabel("More Sensitive")
-        self.fallDetLayout.addWidget(self.moreSensitiveLabel,0,10,1,1)
-        self.fallDetLayout.addWidget(self.fallDetSlider,1,0,1,11)
-        self.fallDetectionOptionsBox.setLayout(self.fallDetLayout)
+        self.fallDetectionOptionsBox = QGroupBox('Fall Detection for 5 people')
+        self.fallDetLayout = QGridLayout(self.fallDetectionOptionsBox)
+        self.left_panel = QtWidgets.QWidget()
+        self.left_layout = QtWidgets.QVBoxLayout(self.left_panel)
+        self.right_panel = QtWidgets.QWidget()
+        self.right_layout = QtWidgets.QVBoxLayout(self.right_panel)
+
+        # 패널 리스트 초기화 (5개의 패널 생성)
+        self.fall_panels = []
+        for i in range(5):
+            l_panel = QtWidgets.QLabel(f"사람 {i + 1}")
+            l_panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
+            l_panel.setFixedSize(300, 60)
+            l_panel.setAlignment(QtCore.Qt.AlignCenter)
+            r_panel = QtWidgets.QLabel(f"")
+            r_panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
+            r_panel.setFixedSize(60, 60)
+            r_panel.setAlignment(QtCore.Qt.AlignCenter)
+            self.fall_panels.append(r_panel)
+            self.left_layout.addWidget(l_panel)
+            self.right_layout.addWidget(r_panel)
+
+        self.left_panel.setLayout(self.left_layout)
+        self.right_panel.setLayout(self.right_layout)
+        
+        horizontal_layout = QtWidgets.QHBoxLayout()
+        horizontal_layout.addWidget(self.left_panel)
+        horizontal_layout.addWidget(self.right_panel)
+        self.fallDetLayout.addLayout(horizontal_layout, 3, 3)
+
+        # 패널을 GUI 메인 레이아웃에 추가 (fall_detection 모드일 때만 보이게 설정)
+        self.left_panel.setVisible(False)
+        self.right_panel.setVisible(False)
+        
         if(self.displayFallDet.checkState() == 2):
             self.fallDetectionOptionsBox.setVisible(True)
+            self.left_panel.setVisible(True)
+            self.right_panel.setVisible(True)
         else:
             self.fallDetectionOptionsBox.setVisible(False)
 
         return self.fallDetectionOptionsBox
+    
+    def update_fall_status(self, fall_status):
+        for i, status in enumerate(fall_status):
+            if i >= 5:  # 패널 개수를 초과하는 트랙은 무시
+                break
+            panel = self.fall_panels[i]
+
+            if status > 0:  # 낙상 감지됨
+                panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
+                
+                # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)
+                QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: green; color: white; border: 1px solid black;"))
+
+            elif tracks[i]:  # 트랙 감지됨
+                panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
+            
+            else:  # 트랙 소멸
+                panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
 
     def parseTrackingCfg(self, args):
         self.maxTracks = int(args[4])

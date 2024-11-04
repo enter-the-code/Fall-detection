@@ -145,10 +145,10 @@ class Window(QMainWindow):
 
 
         # window size range setting
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(380)
         self.setMaximumWidth(600)
         self.setMinimumHeight(260)
-        self.setMaximumHeight(280)
+        self.setMaximumHeight(320)
 
         # Shortcut
         self.shortcut = QShortcut(QKeySequence("Ctrl+W"), self) # ctrl+W to close program

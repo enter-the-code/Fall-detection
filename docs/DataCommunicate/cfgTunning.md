@@ -37,6 +37,7 @@ profileCfg 0 60.75 30.00 25.00 59.10 657930 0 54.71 1 96 2950.00 2 1 36
 * 각 TX 안테나의 TDM-MIMO와 BPM-MIMO 스키마 지정
 * 3D People Tracking Demo의 경우 2개의 BPM 지원하기에 세번째 안테나는 TDM 모드로 진행한다
     * BPM 사용 시, 두 개의 안테나가 같은 방위각(azimuth axis) 가져야 한다
+* frameCfg의 5번째 값은 trackingCfg의 값과 꼭 매칭되어야 한다
 
 #### TDM 사용하는 경우
 ```
@@ -45,7 +46,7 @@ chirpCfg 1 1 0 0 0 0 0 2
 chirpCfg 2 2 0 0 0 0 0 4
 frameCfg 0 2 96 0 55.00 1 0
 ```
-#### BPM(TX0, TX1) + TDM(TX2) 사용 시
+#### BPM(TX0, TX2) + TDM(TX1) 사용 시
 ```
 chirpCfg 0 0 0 0 0 0 0 5
 chirpCfg 1 1 0 0 0 0 0 2
@@ -118,3 +119,99 @@ fovCfg -1 70.0 20.0
 
 ## Detection Layer Parameters
 * 사용 환경에 맞는 설정이 필요
+
+### Scenary Parameters
+* boundaryBox, staticBoundaryBox, sensorPosition, presenceBoundaryBox
+* 실제 환경에 대한 설정과 boundary 설정
+* boundary 밖의 값은 track 되지 않음
+* space 정의
+    * World Space : cartesian. floor level 기준
+    * Tracker Space : cartesian. sensor 기준
+    * Point Cloud Space : spherical. sensor 기준
+        * r : raidial distance
+        * φ : azimuth angle (방위각)
+        * θ : elevation angle
+* multipath reflection 방지 위해서는 탐지공간에 맞는 공간 설정이 필요
+___
+
+#### boundaryBox
+* x / y / z의 min / max 순서
+    * x : 센서 좌우
+    * y : 센서 전후
+    * z : 센서 상하 (floor level 기준)
+* World Space 기준
+```
+boundaryBox -4 4 0 8 0 3
+```
+
+#### staticBoundaryBox
+* target이 static하게 오래 머무를 예상공간 지정
+* 해당 공간 밖의 static reflection은 무시
+* 사람의 출입을 파악하는데도 사용
+```
+staticBoundaryBox -3 3 0.5 7.5 0 3
+```
+
+#### presenceBoundaryBox
+* 위와 같이 출입 파악에 사용
+* 특이사항 없을 시 staticBoundaryBox값 재사용
+```
+presenceBoundaryBox -3 3 0.5 7.5 0 3
+```
+
+#### sensorPosition
+* sensor의 position과 orientation 정의
+* sensorHeight[m] azimuthTilt[deg] elevationTilt[deg]
+    * 모두 float value
+    * elevation tilt는 밑으로 향할때 양의 값
+```
+sensorPosition 2 0 15
+```
+* 위는 바닥에서 2m 높이 센서가 15° 밑으로 바라보는 상태를 표현
+___
+
+### gatingParam
+* target 추적관련 limit 설정
+* target의 예상 크기나 이동 등의 limit을 설정
+* Gain[dB] Width[m] Depth[m] Height[m] Velocity[m/s]
+    * 모두 float value
+```
+gatingParam 3 2 2 2 4
+```
+
+### allocationParam
+* point를 기존에 track 하던 요소 또는 새 요소에 할당할 때 사용
+* 아래는 wall mount 기본값
+```
+allocationParam 40 100 0.1 20 0.5 20
+```
+
+### stateParam
+* Tracking state 관련 설정
+* 3 state 존재
+    * FREE
+    * DETECT
+    * ACTIVE
+* 아래는 wall mount 기본값
+```
+stateParam 3 3 12 500 5 6000
+```
+
+### maxAcceleration
+* 아래는 wall mount 기본값
+```
+maxAcceleration 0.1 0.1 0.1
+```
+
+### trackingCfg
+* Tracker module 사용 여부와 그 설정
+* enable initCfgParams maxNumPoints maxNumTracks maxRadialVel raidialVelResol deltaT boresightFilterEnable
+* maxRadialVel은 raidial 최고속도 * 10
+* raidialVelResol은 mm/s 단위
+* deltaT는 frameRate[ms]를 정의
+    * 센서 chirp config와 일치해야한다
+* boresightFilterEnable은 wall mount에서는 무시하는 값이다
+```
+trackingCfg 1 2 800 20 50 100 55
+```
+

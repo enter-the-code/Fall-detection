@@ -117,7 +117,7 @@ compRangeBiasAndRxChanPhase 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0
 fovCfg -1 70.0 20.0
 ```
 
-## Detection Layer Parameters
+## Tracker Layer Parameters
 * 사용 환경에 맞는 설정이 필요
 
 ### Scenary Parameters

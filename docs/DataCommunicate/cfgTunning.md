@@ -135,7 +135,7 @@ fovCfg -1 70.0 20.0
 ___
 
 #### boundaryBox
-* x / y / z의 min / max 순서
+* x / y / z의 min / max 순서 [float]
     * x : 센서 좌우
     * y : 센서 전후
     * z : 센서 상하 (floor level 기준)

@@ -133,7 +133,11 @@ class Window(QMainWindow):
         self.initCfgBox()
 
         # icon
-        self.setWindowIcon(QtGui.QIcon(BASE_DIR + "/img/bm_icon.png"))
+        if getattr(sys, 'frozen', False):
+            self.setWindowIcon(QtGui.QIcon(os.path.join(sys._MEIPASS, 'bm_icon.ico')))
+            print(sys._MEIPASS)
+        else:
+            self.setWindowIcon(QtGui.QIcon(BASE_DIR + "/img/bm_icon.ico"))
 
         # Layout setting
         self.gridLayout = QGridLayout()

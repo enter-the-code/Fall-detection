@@ -77,7 +77,10 @@ parserFunctions = {
 }
 
 # MACRO constants
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):   # base path for executable app
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INI_FILE_NAME = "batch_maker.ini"
 INI_PATH = os.path.join(BASE_DIR, INI_FILE_NAME)
 

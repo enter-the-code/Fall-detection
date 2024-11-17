@@ -1,4 +1,4 @@
-# How to Build
+# Package Installation
 ## Visualizer
 Visualizer 구동을 위해서는 아래와 같은 패키지 설치가 필요하다
 ### Pyside2

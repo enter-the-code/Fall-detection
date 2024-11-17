@@ -8,7 +8,7 @@ pip install pyinstaller
 
 ## 초기 빌드
 ```cmd
-pyinstaller --onefile --windowed -n "FnDigitEncoder" FnDigitEncoder.py  
+pyinstaller --onefile --windowed -n "app_name" app.py  
 ```
 
 ### 다시 빌드
@@ -57,4 +57,36 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+```
+
+## 실행이 되지 않는다면
+```py
+exe=EXE(
+    ...
+    debug=True,
+    ...
+    console=True,
+    ...
+)
+```
+와 같이 설정하여 문제점 확인
+
+### dll missing
+* datas에 직접 path 명시하여 해결가능
+* intel cpu의 경우 아래 명령어 시도가능
+```
+conda install mkl
+or
+pip install mkl
+```
+
+### icon missing
+```py
+if getattr(sys, 'frozen', False):
+    os.path.join(sys._MEIPASS, 'bm_icon.ico')
+```
+* 위와 같이 임시 폴더에서 아이콘 찾도록 지정
+
+```py
+datas=[('img/bm_icon.ico','.')]
 ```

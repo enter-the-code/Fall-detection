@@ -12,3 +12,7 @@
 
 # csv tables
 *.csv
+
+# app build output
+**/dist/*
+**/build/*

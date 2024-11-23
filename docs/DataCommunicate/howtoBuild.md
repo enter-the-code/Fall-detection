@@ -90,3 +90,16 @@ if getattr(sys, 'frozen', False):
 ```py
 datas=[('img/bm_icon.ico','.')]
 ```
+
+## venv에서 빌드
+* conda에서 빌드시 용량 커지는 문제점 존재
+```cmd
+py -0
+```
+* 위 명령어로 원하는 버전 있는지 먼저 확인 후
+```cmd
+py -3.10 -m venv name_of_venv
+name_of_venv\Scripts\activate
+pip install Pyside2 pyserial numpy pyinstaller
+```
+* 이후 동일하게 빌드 가능

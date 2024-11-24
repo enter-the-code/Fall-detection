@@ -310,64 +310,135 @@ def getBoxLinesCoords(
     leg_width=0.2, leg_length=0.7,
     arm_offset=0.3, leg_offset=0.2,
     arm_swing_angle=np.radians(30),  #팔 앞뒤
-    leg_swing_angle=np.radians(30)   # 다리 앞뒤
+    leg_swing_angle=np.radians(30),   # 다리 앞뒤
+    rotation_axis = 0 # 0 == 서 있는 상태, 1 == 누운 상태, 2 == 앉은 상태
 ):
-    # 몸
-    body_verts = getBoxVertices(
-        x - body_width / 2, y - body_depth / 2, z,
-        x + body_width / 2, y + body_depth / 2, z + body_height
-    )
-    body_lines = getBoxLinesFromVerts(body_verts)
+    if rotation_axis == 0 or rotation_axis == 2: # 서 있는 상태 or 앉은 상태
+        # 몸
+        body_verts = getBoxVertices(
+            x - body_width / 2, y - body_depth / 2, z,
+            x + body_width / 2, y + body_depth / 2, z + body_height
+        )
+        body_lines = getBoxLinesFromVerts(body_verts)
 
-    # 머리
-    head_verts = getBoxVertices(
-        x - head_size / 2, y - head_size / 2, z + body_height,
-        x + head_size / 2, y + head_size / 2, z + body_height + head_size
-    )
-    head_lines = getBoxLinesFromVerts(head_verts)
+        # 머리
+        head_verts = getBoxVertices(
+            x - head_size / 2, y - head_size / 2, z + body_height,
+            x + head_size / 2, y + head_size / 2, z + body_height + head_size
+        )
+        head_lines = getBoxLinesFromVerts(head_verts)
 
-    # 완팔
-    left_arm_verts = getBoxVertices(
-        x - body_width / 2 - arm_width, y - arm_width / 2, z + body_height - arm_length,
-        x - body_width / 2, y + arm_width / 2, z + body_height
-    )
-    left_shoulder = np.array([x - body_width / 2, y, z + body_height])  # 어깨를 회전 중심으로 설정
-    left_arm_verts = rotate_vertices(np.array(left_arm_verts), left_shoulder, -arm_swing_angle, axis="x")
-    left_arm_lines = getBoxLinesFromVerts(left_arm_verts)
+        # 완팔
+        left_arm_verts = getBoxVertices(
+            x - body_width / 2 - arm_width, y - arm_width / 2, z + body_height - arm_length,
+            x - body_width / 2, y + arm_width / 2, z + body_height
+        )
+        left_shoulder = np.array([x - body_width / 2, y, z + body_height])  # 어깨를 회전 중심으로 설정
+        left_arm_verts = rotate_vertices(np.array(left_arm_verts), left_shoulder, -arm_swing_angle, axis="x")
+        left_arm_lines = getBoxLinesFromVerts(left_arm_verts)
 
-    # 오른팔
-    right_arm_verts = getBoxVertices(
-        x + body_width / 2, y - arm_width / 2, z + body_height - arm_length,
-        x + body_width / 2 + arm_width, y + arm_width / 2, z + body_height
-    )
-    right_shoulder = np.array([x + body_width / 2, y, z + body_height])  # 어깨 회전
-    right_arm_verts = rotate_vertices(np.array(right_arm_verts), right_shoulder, arm_swing_angle, axis="x")
-    right_arm_lines = getBoxLinesFromVerts(right_arm_verts)
+        # 오른팔
+        right_arm_verts = getBoxVertices(
+            x + body_width / 2, y - arm_width / 2, z + body_height - arm_length,
+            x + body_width / 2 + arm_width, y + arm_width / 2, z + body_height
+        )
+        right_shoulder = np.array([x + body_width / 2, y, z + body_height])  # 어깨 회전
+        right_arm_verts = rotate_vertices(np.array(right_arm_verts), right_shoulder, arm_swing_angle, axis="x")
+        right_arm_lines = getBoxLinesFromVerts(right_arm_verts)
 
-    # 왼다리
-    left_leg_verts = getBoxVertices(
-        x - leg_width / 2 - leg_offset, y - leg_width / 2, z - leg_length,
-        x + leg_width / 2 - leg_offset, y + leg_width / 2, z
-    )
-    left_pelvis = np.array([x - leg_offset, y, z])  # 회전축(좌표상 다리 최상단 논리상 골반)
-    left_leg_verts = rotate_vertices(np.array(left_leg_verts), left_pelvis, leg_swing_angle, axis="x")
-    left_leg_lines = getBoxLinesFromVerts(left_leg_verts)
+        if rotation_axis == 0: # 서 있는 상태
+            # 왼다리
+            left_leg_verts = getBoxVertices(
+                x - leg_width / 2 - leg_offset, y - leg_width / 2, z - leg_length,
+                x + leg_width / 2 - leg_offset, y + leg_width / 2, z
+            )
+            left_pelvis = np.array([x - leg_offset, y, z])  # 회전축(좌표상 다리 최상단 논리상 골반)
+            left_leg_verts = rotate_vertices(np.array(left_leg_verts), left_pelvis, leg_swing_angle, axis="x")
+            left_leg_lines = getBoxLinesFromVerts(left_leg_verts)
 
-    # 오른다리
-    right_leg_verts = getBoxVertices(
-        x - leg_width / 2 + leg_offset, y - leg_width / 2, z - leg_length,
-        x + leg_width / 2 + leg_offset, y + leg_width / 2, z
-    )
-    right_pelvis = np.array([x + leg_offset, y, z])  # 회전축(좌표상 다리 최상단 논리상 골반)
-    right_leg_verts = rotate_vertices(np.array(right_leg_verts), right_pelvis, -leg_swing_angle, axis="x")
-    right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
+            # 오른다리
+            right_leg_verts = getBoxVertices(
+                x - leg_width / 2 + leg_offset, y - leg_width / 2, z - leg_length,
+                x + leg_width / 2 + leg_offset, y + leg_width / 2, z
+            )
+            right_pelvis = np.array([x + leg_offset, y, z])  # 회전축(좌표상 다리 최상단 논리상 골반)
+            right_leg_verts = rotate_vertices(np.array(right_leg_verts), right_pelvis, -leg_swing_angle, axis="x")
+            right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
+    
+        elif rotation_axis == 2: # 앉은 상태 프로토타입
+            center = np.array([x, y, z])
+            left_leg_verts = getBoxVertices(
+                x - leg_width / 2 - leg_offset, y - leg_width / 2, z - leg_length,
+                x + leg_width / 2 - leg_offset, y + leg_width / 2, z
+            )
+            
+            right_leg_verts = getBoxVertices(
+                x - leg_width / 2 + leg_offset, y - leg_width / 2, z - leg_length,
+                x + leg_width / 2 + leg_offset, y + leg_width / 2, z
+            )
+            
+            left_leg_verts = rotate_vertices(np.array(left_leg_verts), center, 1.571, axis="z")
+            left_leg_lines = getBoxLinesFromVerts(left_leg_verts)
+            
+            right_leg_verts = rotate_vertices(np.array(right_leg_verts), center, 1.571, axis="z")
+            right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
+      
+    elif rotation_axis == 1: # 누운 상태 프로토타입
+        center = np.array([x, y, z]) # 회전 중심
+        # 몸
+        body_verts = getBoxVertices(
+            x - body_width / 2, y - body_depth / 2, z,
+            x + body_width / 2, y + body_depth / 2, z + body_height
+        )
+        body_verts = rotate_vertices(np.array(body_verts), center, 1.571, axis="z")
+        body_lines = getBoxLinesFromVerts(body_verts)
 
-    #파츠를 죄다 합쳐서 리턴
+        # 머리
+        head_verts = getBoxVertices(
+            x - head_size / 2, y - head_size / 2, z + body_height,
+            x + head_size / 2, y + head_size / 2, z + body_height + head_size
+        )
+        head_verts = rotate_vertices(np.array(head_verts), center, 1.571, axis="z")
+        head_lines = getBoxLinesFromVerts(head_verts)
+
+        # 완팔
+        left_arm_verts = getBoxVertices(
+            x - body_width / 2 - arm_width, y - arm_width / 2, z + body_height - arm_length,
+            x - body_width / 2, y + arm_width / 2, z + body_height
+        )
+        left_arm_verts = rotate_vertices(np.array(left_arm_verts), center, 1.571, axis="z")
+        left_arm_lines = getBoxLinesFromVerts(left_arm_verts)
+
+        # 오른팔
+        right_arm_verts = getBoxVertices(
+            x + body_width / 2, y - arm_width / 2, z + body_height - arm_length,
+            x + body_width / 2 + arm_width, y + arm_width / 2, z + body_height
+        )
+        right_arm_verts = rotate_vertices(np.array(right_arm_verts), center, 1.571, axis="z")
+        right_arm_lines = getBoxLinesFromVerts(right_arm_verts)
+        
+        left_leg_verts = getBoxVertices(
+            x - leg_width / 2 - leg_offset, y - leg_width / 2, z - leg_length,
+            x + leg_width / 2 - leg_offset, y + leg_width / 2, z
+        )
+        
+        right_leg_verts = getBoxVertices(
+            x - leg_width / 2 + leg_offset, y - leg_width / 2, z - leg_length,
+            x + leg_width / 2 + leg_offset, y + leg_width / 2, z
+        )
+        
+        left_leg_verts = rotate_vertices(np.array(left_leg_verts), center, 1.571, axis="z")
+        left_leg_lines = getBoxLinesFromVerts(left_leg_verts)
+        
+        right_leg_verts = rotate_vertices(np.array(right_leg_verts), center, 1.571, axis="z")
+        right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
+     
+    # 파츠를 죄다 합쳐서 리턴   
     all_lines = np.vstack((
-        body_lines, head_lines,
-        left_arm_lines, right_arm_lines,
-        left_leg_lines, right_leg_lines
-    ))
+            body_lines, head_lines,
+            left_arm_lines, right_arm_lines,
+            left_leg_lines, right_leg_lines
+        ))
 
     return all_lines
 # Function to rotate a set of coordinates [x,y,z] about the various axis via the tilt angles

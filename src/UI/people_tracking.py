@@ -133,7 +133,7 @@ class PeopleTracking(Plot3D, Plot1D):
                                 if(self.displayFallDet.checkState() == 2):
                                     # Compute the fall detection results for each object
                                     fallDetectionDisplayResults = self.fallDetection.step(outputDict['heightData'], outputDict['trackData'])
-                                    self.gui.update_fall_status(fallDetectionDisplayResults)
+                                    self.gui.update_fall_status(fallDetectionDisplayResults, tid, tracks)
                                     if (fallDetectionDisplayResults[tid] > 0): 
                                         height_str = height_str + " FALL DETECTED"
                                 self.coordStr[tid].setText(height_str)
@@ -274,23 +274,23 @@ class PeopleTracking(Plot3D, Plot1D):
 
         return self.fallDetectionOptionsBox
     
-    def update_fall_status(self, fall_status):
-        for i, status in enumerate(fall_status):
-            if i >= 5:  # 패널 개수를 초과하는 트랙은 무시
-                break
-            panel = self.fall_panels[i]
+    def update_fall_status(self, fall_status, tid, tracks):
+        if tid > 5:
+            return
+        
+        panel = self.fall_panels[tid]
 
-            if status > 0:  # 낙상 감지됨
-                panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
-                
-                # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)
-                QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: green; color: white; border: 1px solid black;"))
-
-            elif tracks[i]:  # 트랙 감지됨
-                panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
+        if fall_status[tid] > 0:  # 낙상 감지됨
+            panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
             
-            else:  # 트랙 소멸
-                panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
+            # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)
+            QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: green; color: white; border: 1px solid black;"))
+
+        elif tracks[tid]:  # 트랙 감지됨
+            panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
+        
+        else:  # 트랙 소멸
+            panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
 
     def parseTrackingCfg(self, args):
         self.maxTracks = int(args[4])

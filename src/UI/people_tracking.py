@@ -133,7 +133,7 @@ class PeopleTracking(Plot3D, Plot1D):
                                 if(self.displayFallDet.checkState() == 2):
                                     # Compute the fall detection results for each object
                                     fallDetectionDisplayResults = self.fallDetection.step(outputDict['heightData'], outputDict['trackData'])
-                                    self.gui.update_fall_status(fallDetectionDisplayResults, tid, tracks)
+                                    self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
                                     if (fallDetectionDisplayResults[tid] > 0): 
                                         height_str = height_str + " FALL DETECTED"
                                 self.coordStr[tid].setText(height_str)

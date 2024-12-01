@@ -255,15 +255,17 @@ def getBoxArcs2D(rl,tl,zl,rr,tr,zr):
     verts = getArcVertices2D(rl,tl,zl,rr,tr,zr)
     return getArcLinesFromVerts2D(verts)
 
+
 # def getBoxLinesCoords(x,y,z,xrad=0.25,yrad=0.25,zrad=0.5):
-#     xl=x-xrad
-#     xr=x+xrad
-#     yl=y-yrad
-#     yr=y+yrad
-#     zl=z-zrad
-#     zr=z+zrad
-#     verts = getBoxVertices(xl,yl,zl,xr,yr,zr)
-#     return getBoxLinesFromVerts(verts)
+#    xl=x-xrad
+#    xr=x+xrad
+#    yl=y-yrad
+#    yr=y+yrad
+#    zl=z-zrad
+#    zr=z+zrad
+#    verts = getBoxVertices(xl,yl,zl,xr,yr,zr)
+#    return getBoxLinesFromVerts(verts)
+
 def rotate_vertices(vertices, origin, angle, axis="x"):
     """
     주어진 꼭짓점(vertices)을 특정 origin 기준으로 특정 axis를 중심으로 angle만큼 회전.
@@ -304,6 +306,7 @@ def rotate_vertices(vertices, origin, angle, axis="x"):
 
 def getBoxLinesCoords(
     x, y, z,
+    track_prediction,
     body_width=0.4, body_height=0.6, body_depth=0.25,  # 몸뚱이 앞뒤 넓이
     head_size=0.4,
     arm_width=0.2, arm_length=0.6,
@@ -311,11 +314,8 @@ def getBoxLinesCoords(
     arm_offset=0.3, leg_offset=0.2,
     arm_swing_angle=np.radians(30),  #팔 앞뒤
     leg_swing_angle=np.radians(30),   # 다리 앞뒤
-    rotation_axis = 0, # 0 == 서 있는 상태, 1 == 누운 상태, 2 == 앉은 상태
-    rotation_angle = np.radians(90),
-    center = np.array([x, y, z]) # 회전 중심
 ):
-    if rotation_axis == 0 or rotation_axis == 2: # 서 있는 상태 or 앉은 상태
+    if track_prediction == 1 or track_prediction == 3: # 서 있는 상태 or 앉은 상태
         # 몸
         body_verts = getBoxVertices(
             x - body_width / 2, y - body_depth / 2, z,
@@ -348,7 +348,7 @@ def getBoxLinesCoords(
         right_arm_verts = rotate_vertices(np.array(right_arm_verts), right_shoulder, arm_swing_angle, axis="x")
         right_arm_lines = getBoxLinesFromVerts(right_arm_verts)
 
-        if rotation_axis == 0: # 서 있는 상태
+        if track_prediction == 3: # 서 있는 상태
             # 왼다리
             left_leg_verts = getBoxVertices(
                 x - leg_width / 2 - leg_offset, y - leg_width / 2, z - leg_length,
@@ -367,7 +367,8 @@ def getBoxLinesCoords(
             right_leg_verts = rotate_vertices(np.array(right_leg_verts), right_pelvis, -leg_swing_angle, axis="x")
             right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
     
-        elif rotation_axis == 2: # 앉은 상태 프로토타입
+        elif track_prediction == 1: # 앉은 상태 프로토타입
+            center = np.array([x, y, z])
             left_leg_verts = getBoxVertices(
                 x - leg_width / 2 - leg_offset, y - leg_width / 2, z - leg_length,
                 x + leg_width / 2 - leg_offset, y + leg_width / 2, z
@@ -378,19 +379,20 @@ def getBoxLinesCoords(
                 x + leg_width / 2 + leg_offset, y + leg_width / 2, z
             )
             
-            left_leg_verts = rotate_vertices(np.array(left_leg_verts), center, rotation_angle, axis="x")
+            left_leg_verts = rotate_vertices(np.array(left_leg_verts), center, 1.571, axis="z")
             left_leg_lines = getBoxLinesFromVerts(left_leg_verts)
             
-            right_leg_verts = rotate_vertices(np.array(right_leg_verts), center, rotation_angle, axis="x")
+            right_leg_verts = rotate_vertices(np.array(right_leg_verts), center, 1.571, axis="z")
             right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
       
-    elif rotation_axis == 1: # 누운 상태 프로토타입
+    else: # 누운 상태 프로토타입
+        center = np.array([x, y, z]) # 회전 중심
         # 몸
         body_verts = getBoxVertices(
             x - body_width / 2, y - body_depth / 2, z,
             x + body_width / 2, y + body_depth / 2, z + body_height
         )
-        body_verts = rotate_vertices(np.array(body_verts), center, rotation_angle, axis="x")
+        body_verts = rotate_vertices(np.array(body_verts), center, 1.571, axis="z")
         body_lines = getBoxLinesFromVerts(body_verts)
 
         # 머리
@@ -398,7 +400,7 @@ def getBoxLinesCoords(
             x - head_size / 2, y - head_size / 2, z + body_height,
             x + head_size / 2, y + head_size / 2, z + body_height + head_size
         )
-        head_verts = rotate_vertices(np.array(head_verts), center, rotation_angle, axis="x")
+        head_verts = rotate_vertices(np.array(head_verts), center, 1.571, axis="z")
         head_lines = getBoxLinesFromVerts(head_verts)
 
         # 완팔
@@ -406,7 +408,7 @@ def getBoxLinesCoords(
             x - body_width / 2 - arm_width, y - arm_width / 2, z + body_height - arm_length,
             x - body_width / 2, y + arm_width / 2, z + body_height
         )
-        left_arm_verts = rotate_vertices(np.array(left_arm_verts), center, rotation_angle, axis="x")
+        left_arm_verts = rotate_vertices(np.array(left_arm_verts), center, 1.571, axis="z")
         left_arm_lines = getBoxLinesFromVerts(left_arm_verts)
 
         # 오른팔
@@ -414,7 +416,7 @@ def getBoxLinesCoords(
             x + body_width / 2, y - arm_width / 2, z + body_height - arm_length,
             x + body_width / 2 + arm_width, y + arm_width / 2, z + body_height
         )
-        right_arm_verts = rotate_vertices(np.array(right_arm_verts), center, rotation_angle, axis="x")
+        right_arm_verts = rotate_vertices(np.array(right_arm_verts), center, 1.571, axis="z")
         right_arm_lines = getBoxLinesFromVerts(right_arm_verts)
         
         left_leg_verts = getBoxVertices(
@@ -427,10 +429,10 @@ def getBoxLinesCoords(
             x + leg_width / 2 + leg_offset, y + leg_width / 2, z
         )
         
-        left_leg_verts = rotate_vertices(np.array(left_leg_verts), center, rotation_angle, axis="x")
+        left_leg_verts = rotate_vertices(np.array(left_leg_verts), center, 1.571, axis="z")
         left_leg_lines = getBoxLinesFromVerts(left_leg_verts)
         
-        right_leg_verts = rotate_vertices(np.array(right_leg_verts), center, rotation_angle, axis="x")
+        right_leg_verts = rotate_vertices(np.array(right_leg_verts), center, 1.571, axis="z")
         right_leg_lines = getBoxLinesFromVerts(right_leg_verts)
      
     # 파츠를 죄다 합쳐서 리턴   
@@ -441,6 +443,7 @@ def getBoxLinesCoords(
         ))
 
     return all_lines
+
 # Function to rotate a set of coordinates [x,y,z] about the various axis via the tilt angles
 # Tilt angles are in degrees
 def eulerRot(x, y, z, elevTilt, aziTilt):

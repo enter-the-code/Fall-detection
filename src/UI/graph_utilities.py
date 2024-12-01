@@ -314,9 +314,9 @@ def getBoxLinesCoords(
     arm_offset=0.3, leg_offset=0.2,
     arm_swing_angle=np.radians(30),  #팔 앞뒤
     leg_swing_angle=np.radians(30),   # 다리 앞뒤
-    rotation_angle=np.radians(90),
-    center = np.array([x, y, z])
+    rotation_angle=np.radians(90)
 ):
+    center = np.array([x, y, z])
     if track_prediction == 1 or track_prediction == 3: # 서 있는 상태 or 앉은 상태
         # 몸
         body_verts = getBoxVertices(

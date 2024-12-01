@@ -329,7 +329,7 @@ def parseTrackHeightTLV(tlvData, tlvLength, outputDict):
         try:
             targetData = struct.unpack(targetStruct,tlvData[i * targetSize:(i + 1) * targetSize])
         except:
-            log.error('Target TLV parsing failed')
+            # log.error('Target TLV parsing failed')
             outputDict['numDetectedHeights'], outputDict['heightData'] = 0, heights
 
         heights[i,0] = targetData[0] # Target ID

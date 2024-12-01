@@ -306,7 +306,7 @@ def rotate_vertices(vertices, origin, angle, axis="x"):
 
 def getBoxLinesCoords(
     x, y, z,
-    track_prediction,
+    track_prediction=1,
     body_width=0.4, body_height=0.6, body_depth=0.25,  # 몸뚱이 앞뒤 넓이
     head_size=0.4,
     arm_width=0.2, arm_length=0.6,

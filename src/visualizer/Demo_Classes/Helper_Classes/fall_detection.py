@@ -79,14 +79,14 @@ class FallDetection:
 
         one_person_ratio = one_person_frames / total_frames
         if one_person_ratio >= self.one_person_threshold:
-            print("전체 데이터의 80% 이상이 1인 데이터입니다. 클러스터링을 건너뜁니다.")
+            # print("전체 데이터의 80% 이상이 1인 데이터입니다. 클러스터링을 건너뜁니다.")
             return None
         else:
             if clustered_frames:
                 final_clustered_data = pd.concat(clustered_frames).reset_index(drop=True)
                 return final_clustered_data
             else:
-                print("유효한 클러스터링 결과가 없습니다.")
+                # print("유효한 클러스터링 결과가 없습니다.")
                 return None
 
     #클러스터링 된 데이터 간 궤적 추적
@@ -145,7 +145,7 @@ class FallDetection:
                 continue
             num_frames = group['frameNum'].nunique()
             if num_frames / total_frames <= self.min_frame_ratio:
-                print(f"Global Cluster {cluster_id}: 프레임 수가 전체의 10% 이하로 건너뜁니다.")
+                # print(f"Global Cluster {cluster_id}: 프레임 수가 전체의 10% 이하로 건너뜁니다.")
                 continue
             cluster_dataframes[cluster_id] = group
 
@@ -166,7 +166,7 @@ class FallDetection:
             if cluster_id < 5:
                 sequences = self.prepare_data(cluster_df)
                 if sequences.size == 0:
-                    print(f"Cluster {cluster_id}: No valid sequences. Skipping.")
+                    # print(f"Cluster {cluster_id}: No valid sequences. Skipping.")
                     continue
 
                 print(f"Processing Cluster {cluster_id}, Data Shape: {sequences.shape}")
@@ -176,10 +176,14 @@ class FallDetection:
                 avg_matched = np.expand_dims(avg_seq, axis=0)
 
                 predictions = self.model.predict(sequences)
-                print(f"Predictions for Cluster {cluster_id}: {(np.argmax(predictions, axis=1))[0]}")
-                answer = np.argmax(predictions, axis=1)
+                # print(f"Predictions for Cluster {cluster_id}: {(np.argmax(predictions, axis=1))[0]}")
+                answer = (np.argmax(predictions, axis=1))[0]
                 outputList[cluster_id] = answer
-                tracks[cluster_id, 12] = answer
+                # tracks[cluster_id, 12] = answer
+
+                print("=Frame Processed=")
+
+        return outputList
 
     def run_pipeline(self, tracks):
         clustered_data = self.cluster_data()
@@ -188,11 +192,12 @@ class FallDetection:
             if cluster_dataframes:
                 self.run_model(cluster_dataframes, tracks)
             else:
-                print("No valid clusters for prediction.")
+                # print("No valid clusters for prediction.")
+                pass
         else:
-            print("Using naive data for prediction.")
+            # print("Using naive data for prediction.")
             data = self.data
-            self.run_model({0: data})
+            self.run_model({0: data}, tracks)
 
     # Update the fall detection results for every track in the frame
     def step(self, outputDict):
@@ -204,24 +209,24 @@ class FallDetection:
             self.dictQ.popleft()
 
         queue_list = []
-        # print(type(outputDict["pointCloud"]))
-        # print(type(outputDict["pointCloud"][0]))
-        # print(type(outputDict["pointCloud"][0][0]))
-        # return
-        for idx, elem in enumerate(self.dictQ):
-            num = elem['numDetectedPoints'] # pointNum
-            for point in range(num):
-                point = [
-                    idx + 1,    # frameNum
-                    point,  # pointNum
-                    outputDict['pointCloud'][point][0], # Range
-                    outputDict['pointCloud'][point][1], # Azimuth
-                    outputDict['pointCloud'][point][2], # Elevation
-                    outputDict['pointCloud'][point][3], # Doppler
-                    outputDict['pointCloud'][point][4]  # SNR
-                ]
-                queue_list.append(point)
+        
+        try:
+            for idx, elem in enumerate(self.dictQ):
+                num = elem['numDetectedPoints'] # pointNum
+                for point in range(num):
+                    point = [
+                        idx + 1,    # frameNum
+                        point,  # pointNum
+                        outputDict['pointCloud'][point][0], # Range
+                        outputDict['pointCloud'][point][1], # Azimuth
+                        outputDict['pointCloud'][point][2], # Elevation
+                        outputDict['pointCloud'][point][3], # Doppler
+                        outputDict['pointCloud'][point][4]  # SNR
+                    ]
+                    queue_list.append(point)
 
-        self.data = pd.DataFrame(queue_list, columns=['frameNum','pointNum','Range','Azimuth','Elevation','Doppler','SNR'])
+            self.data = pd.DataFrame(queue_list, columns=['frameNum','pointNum','Range','Azimuth','Elevation','Doppler','SNR'])
 
-        self.run_pipeline(outputDict['trackData'])
+            self.run_pipeline(outputDict['trackData'])
+        except KeyError:
+            pass

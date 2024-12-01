@@ -67,7 +67,8 @@ class Window(QMainWindow):
 
         self.core = Core()
 
-        self.setWindowIcon(QtGui.QIcon("./images/logo.png"))
+        # NO ICON
+        # self.setWindowIcon(QtGui.QIcon("./images/logo.png"))
 
         self.shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
         self.shortcut.activated.connect(self.close)
@@ -356,6 +357,9 @@ class Window(QMainWindow):
 
 class Core:
     def __init__(self):
+        # for fast run
+        self.isSlotRunning = False
+
         self.cachedData = CachedDataType()
 
         self.device = "xWR6843"
@@ -620,7 +624,19 @@ class Core:
             log.error("Parsing .cfg file failed. Did you select the right file?")
 
     def updateGraph(self, outputDict):
-        self.demoClassDict[self.demo].updateGraph(outputDict)
+        if self.demo != "3D People Tracking":
+            self.demoClassDict[self.demo].updateGraph(outputDict)
+        else:
+            # check main is busy with inference
+            if self.isSlotRunning == True:
+                # give up inference
+                self.demoClassDict[self.demo].updateGraph(outputDict, busy=True)
+            
+            self.isSlotRunning = True
+
+            self.demoClassDict[self.demo].updateGraph(outputDict, busy=False)
+
+            self.isSlotRunning = False
 
     def connectCom(self, cliCom, dataCom, connectStatus):
         if self.demo == DEMO_GESTURE:

@@ -49,6 +49,9 @@ class PeopleTracking(Plot3D, Plot1D):
         self.maxTracks = int(5) # default to 5 tracks
         self.trackColorMap = get_trackColors(self.maxTracks)
 
+        # for caching state
+        self.old_state = 3
+
     def setupGUI(self, gridLayout, demoTabs, device):
         # Init setup pane on left hand side
         statBox = self.initStatsPane()
@@ -65,7 +68,7 @@ class PeopleTracking(Plot3D, Plot1D):
         self.device = device
         self.tabs = demoTabs
 
-    def updateGraph(self, outputDict):
+    def updateGraph(self, outputDict, busy=False):
         self.plotStart = int(round(time.time()*1000))
         self.updatePointCloud(outputDict)
 
@@ -133,10 +136,19 @@ class PeopleTracking(Plot3D, Plot1D):
                                     # If this track was computed to have fallen, display it on the screen
                                     if(self.displayFallDet.checkState() == 2):
                                         # Compute the fall detection results for each object
-                                        fallDetectionDisplayResults = self.fallDetection.step(outputDict)
+                                        # is main is busy, skip inference
+                                        if busy == True:
+                                            fallDetectionDisplayResults = self.old_state
+                                        else:
+                                            fallDetectionDisplayResults = self.fallDetection.step(outputDict)
+                                            # update state cache
+                                            self.old_state = fallDetectionDisplayResults
                                         self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
-                                        if (fallDetectionDisplayResults[tid] == 0): 
-                                            height_str = height_str + " FALL DETECTED"
+                                        try:
+                                            if (fallDetectionDisplayResults[tid] == 0): 
+                                                height_str = height_str + " FALL DETECTED"
+                                        except TypeError:
+                                            pass
                                     self.coordStr[tid].setText(height_str)
                                     self.coordStr[tid].setX(track[1])
                                     self.coordStr[tid].setY(track[2])
@@ -283,16 +295,19 @@ class PeopleTracking(Plot3D, Plot1D):
         
         panel = self.fall_panels[tid]
 
-        if fall_status[tid] == 0:  # 낙상 감지됨
-            panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
-            
-            # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)
-            QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: green; color: white; border: 1px solid black;"))
+        try:
+            if fall_status[tid] == 0:  # 낙상 감지됨
+                panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
+                
+                # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)
+                QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: green; color: white; border: 1px solid black;"))
 
-        elif tracks[tid]:  # 트랙 감지됨
-            panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
-        
-        else:  # 트랙 소멸
+            elif tracks[tid]:  # 트랙 감지됨
+                panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
+            
+            else:  # 트랙 소멸
+                panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
+        except:
             panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
 
     def parseTrackingCfg(self, args):

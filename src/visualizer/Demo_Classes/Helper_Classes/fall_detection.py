@@ -195,7 +195,8 @@ class FallDetection:
 
         return outputList
 
-    def run_pipeline(self, tracks):
+    def run_pipeline(self):
+        tracks = self.dict_param
         clustered_data = self.cluster_data()
         if clustered_data is not None:
             cluster_dataframes = self.track_clusters(clustered_data)
@@ -239,14 +240,14 @@ class FallDetection:
 
             # return self.run_pipeline(outputDict['trackData'])
 
-            if self.isSlotRunning == False:
+            if self.isSlotRunning == True:
                 return self.old_state
             else:
-                self.faldt.isSlotRunning = True
+                self.isSlotRunning = True
                 self.dict_param = outputDict['trackData']
                 self.inferThread.start()
                 self.old_state = self.output
-                self.faldt.isSlotRunning = False
+                self.isSlotRunning = False
                 return self.output
 
         except KeyError:
@@ -260,7 +261,8 @@ class InferThread(QThread):
             self.faldt = faldt
 
     def run(self):
-        self.faldt.output = self.faldt.run_pipeline(self.faldt.dict_param)
+        print("run!")
+        self.faldt.output = self.faldt.run_pipeline()
 
     def stop(self):
         self.terminate()

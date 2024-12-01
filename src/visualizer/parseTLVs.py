@@ -261,7 +261,7 @@ def parseTrackTLV(tlvData, tlvLength, outputDict):
         try:
             targetData = struct.unpack(targetStruct,tlvData[:targetSize])
         except:
-            log.error('Target TLV parsing failed')
+            # log.error('Target TLV parsing failed')
             outputDict['numDetectedTracks'], outputDict['trackData'] = 0, targets
 
         targets[i,0] = targetData[0] # Target ID

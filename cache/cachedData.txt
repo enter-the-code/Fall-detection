@@ -1,4 +1,0 @@
-xWR6843
-3D People Tracking
-D:/codeRepos/FallDetect/src/cfg/ISK_6m_default.cfg
-False

@@ -48,6 +48,7 @@ class PeopleTracking(Plot3D, Plot1D):
         self.colorGradient.setVisible(False)
         self.maxTracks = int(5) # default to 5 tracks
         self.trackColorMap = get_trackColors(self.maxTracks)
+        self.state = 3
 
         # for caching state
         # self.old_state = 3
@@ -145,6 +146,7 @@ class PeopleTracking(Plot3D, Plot1D):
                                         try:
                                             tid = fallDetectionDisplayResults[0]
                                             self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
+                                            self.state = fallDetectionDisplayResults[1]
                                         except TypeError:
                                             pass
 

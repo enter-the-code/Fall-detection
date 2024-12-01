@@ -94,6 +94,7 @@ class updateQTTargetThread3D(QThread):
         np.seterr(divide = 'ignore')
 
         self.man_plt = par.man_plt
+        self.state = par.state
 
         # for i in range(5):
         #     self.man_plt.append(gl.GLLinePlotItem())
@@ -109,7 +110,7 @@ class updateQTTargetThread3D(QThread):
         # track = self.ellipsoids[tid]
         # track = self.man_plt[tid]
         self.track = gl.GLLinePlotItem()
-        mesh = getBoxLinesCoords(x,y,z)
+        mesh = getBoxLinesCoords(x,y,z, track_prediction=self.state)
         self.track.setData(pos=mesh,color=trackColor,width=2,antialias=True,mode='lines')
         # self.pcplot.addItem(track)
         # mesh = getBoxLinesCoords(x,y,z, track[12])

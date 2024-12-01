@@ -95,7 +95,7 @@ class updateQTTargetThread3D(QThread):
         z = track[3]
 
         track = self.ellipsoids[tid]
-        mesh = getBoxLinesCoords(x,y,z)
+        mesh = getBoxLinesCoords(x,y,z, track[12])
         track.setData(pos=mesh,color=trackColor,width=2,antialias=True,mode='lines')
         track.setVisible(True)
 

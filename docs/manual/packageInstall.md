@@ -17,6 +17,6 @@ pip install Pyside2
 
 ### 이외
 ```cmd
-pip install pyqtgraph, pyserial, numpy, tensorflow
+pip install pyqtgraph, pyserial, numpy, tensorflow, pyopengl==3.1.5, pyqtgraph==0.11.0, json-fix==1.0.0
 conda install scikit-learn pandas
 ```

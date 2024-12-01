@@ -132,7 +132,7 @@ class PeopleTracking(Plot3D, Plot1D):
                                 # Found correct track
                                 if (int(track[0]) == int(height[0])):
                                     tid = int(height[0])
-                                    height_str = 'tid : ' + str(height[0]) + ', height : ' + str(round(height[1], 2)) + ' m'
+                                    # height_str = 'tid : ' + str(height[0]) + ', height : ' + str(round(height[1], 2)) + ' m'
                                     # If this track was computed to have fallen, display it on the screen
                                     if(self.displayFallDet.checkState() == 2):
                                         # Compute the fall detection results for each object
@@ -141,19 +141,26 @@ class PeopleTracking(Plot3D, Plot1D):
                                         #     fallDetectionDisplayResults = self.old_state
                                         # else:
                                         fallDetectionDisplayResults = self.fallDetection.step(outputDict)
-                                            # update state cache
-                                            # self.old_state = fallDetectionDisplayResults
-                                        self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
                                         try:
-                                            if (fallDetectionDisplayResults[tid] == 0): 
-                                                height_str = height_str + " FALL DETECTED"
+                                            tid = fallDetectionDisplayResults[0]
+                                            self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
                                         except TypeError:
                                             pass
-                                    self.coordStr[tid].setText(height_str)
-                                    self.coordStr[tid].setX(track[1])
-                                    self.coordStr[tid].setY(track[2])
-                                    self.coordStr[tid].setZ(track[3])
-                                    self.coordStr[tid].setVisible(True)
+
+                                            # update state cache
+                                            # self.old_state = fallDetectionDisplayResults
+                                        # try:
+                                        #     if (fallDetectionDisplayResults[tid] == 0): 
+                                        #         height_str = height_str + " FALL DETECTED"
+                                        # except TypeError:
+                                        #     pass
+
+                                    # TODO
+                                    # self.coordStr[tid].setText(height_str)
+                                    # self.coordStr[tid].setX(track[1])
+                                    # self.coordStr[tid].setY(track[2])
+                                    # self.coordStr[tid].setZ(track[3])
+                                    # self.coordStr[tid].setVisible(True)
                                     break
                 else:
                     tracks = None
@@ -289,24 +296,32 @@ class PeopleTracking(Plot3D, Plot1D):
 
         return self.fallDetectionOptionsBox
     
-    def update_fall_status(self, fall_status, tid, tracks):
-        if tid > 5:
+    def update_fall_status(self, fall_status: list, tid, tracks):
+        if tid > 5 or tid < 0:
+            return
+        try:
+            idx = fall_status[0]
+            if idx < 0:
+                return
+        except:
             return
         
-        panel = self.fall_panels[tid]
+        panel = self.fall_panels[idx]
 
         try:
-            if fall_status[tid] == 0:  # 낙상 감지됨
+            if fall_status[1] == 0:  # 낙상 감지됨
                 panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
                 
                 # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)
-                QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: green; color: white; border: 1px solid black;"))
-
-            elif tracks[tid]:  # 트랙 감지됨
+                QtCore.QTimer.singleShot(10000, lambda p=panel: p.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;"))
+            else:
                 panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
+                QtCore.QTimer.singleShot(500, lambda p=panel: p.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;"))
+            # elif tracks[idx]:  # 트랙 감지됨
+            #     panel.setStyleSheet("background-color: green; color: white; border: 1px solid black;")
             
-            else:  # 트랙 소멸
-                panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
+            # else:  # 트랙 소멸
+            #     panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
         except:
             panel.setStyleSheet("background-color: transparent; border: 1px solid gray; color: black;")
 

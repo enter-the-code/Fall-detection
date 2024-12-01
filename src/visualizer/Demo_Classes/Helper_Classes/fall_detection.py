@@ -11,6 +11,9 @@ from PySide2.QtCore import QThread, Signal
 
 model_path = r"src\visualizer\model\final_model.h5"
 
+default_ret = [-1, 3, None]
+min_body_dots = 60
+
 # Class meant to store the fall detection results of all the tracks
 class FallDetection:
     def __init__(self, model_path=model_path, seqSize = 5, target_eps=1.2, scale_factor=0.6, one_person_threshold=0.8, min_frame_ratio=0.1):
@@ -29,7 +32,7 @@ class FallDetection:
         # to prevent inference load
         self.isSlotRunning = False
         # for caching state
-        self.old_state = [3 for _ in range(5)]
+        self.old_state = default_ret
         self.dict_param = {}
         self.output = self.old_state
 
@@ -171,12 +174,17 @@ class FallDetection:
 
     #모델 실행
     def run_model(self, cluster_dataframes, tracks):
-        outputList = [3 for _ in range(5)]
+        outputList = default_ret
+        cnt = 0
         for cluster_id, cluster_df in cluster_dataframes.items():
             if cluster_id < 5:
                 sequences = self.prepare_data(cluster_df)
                 if sequences.size == 0:
                     # print(f"Cluster {cluster_id}: No valid sequences. Skipping.")
+                    continue
+                
+                # skip small movement
+                if sequences.shape[0] < min_body_dots:
                     continue
 
                 print(f"Processing Cluster {cluster_id}, Data Shape: {sequences.shape}")
@@ -185,13 +193,19 @@ class FallDetection:
                 avg_seq = np.mean(sequences, axis=0)
                 avg_matched = np.expand_dims(avg_seq, axis=0)
 
-                predictions = self.model.predict(sequences)
-                # print(f"Predictions for Cluster {cluster_id}: {(np.argmax(predictions, axis=1))[0]}")
+                predictions = self.model.predict(avg_matched)
+                # print(predictions.shape)
+                # print((np.argmax(predictions, axis=1)))
+                print(f"Predictions for Cluster {cluster_id}, {cnt}: {(np.argmax(predictions, axis=1))[0]}")
                 answer = (np.argmax(predictions, axis=1))[0]
-                outputList[cluster_id] = answer
+                outputList[0] = cnt
+                outputList[1] = answer
+                outputList[2] = avg_matched
+                cnt += 1
+                # outputList[cluster_id] = answer
                 # tracks[cluster_id, 12] = answer
 
-                print("=Frame Processed=")
+        print("=Frame Processed=\n")
 
         return outputList
 
@@ -208,7 +222,8 @@ class FallDetection:
         else:
             # print("Using naive data for prediction.")
             data = self.data
-            return self.run_model({0: data}, tracks)
+            # return self.run_model({0: data}, tracks)
+            return default_ret
 
     # Update the fall detection results for every track in the frame
     def step(self, outputDict):
@@ -261,7 +276,6 @@ class InferThread(QThread):
             self.faldt = faldt
 
     def run(self):
-        print("run!")
         self.faldt.output = self.faldt.run_pipeline()
 
     def stop(self):

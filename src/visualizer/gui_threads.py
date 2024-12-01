@@ -204,7 +204,7 @@ class updateQTTargetThread3D(QThread):
                         trackColor = self.trackColorMap[trackID]
                         self.drawTrack(track,trackColor)
         except:
-            # log.error("Unable to draw all tracks, ignoring and continuing execution...")
+            log.error("Unable to draw all tracks, ignoring and continuing execution...")
             pass
 
         self.done.emit()

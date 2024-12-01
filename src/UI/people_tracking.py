@@ -132,9 +132,9 @@ class PeopleTracking(Plot3D, Plot1D):
                                 # If this track was computed to have fallen, display it on the screen
                                 if(self.displayFallDet.checkState() == 2):
                                     # Compute the fall detection results for each object
-                                    fallDetectionDisplayResults = self.fallDetection.step(outputDict['heightData'], outputDict['trackData'])
+                                    fallDetectionDisplayResults = self.fallDetection.step(outputDict)
                                     self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
-                                    if (fallDetectionDisplayResults[tid] > 0): 
+                                    if (fallDetectionDisplayResults[tid] == 0): 
                                         height_str = height_str + " FALL DETECTED"
                                 self.coordStr[tid].setText(height_str)
                                 self.coordStr[tid].setX(track[1])
@@ -280,7 +280,7 @@ class PeopleTracking(Plot3D, Plot1D):
         
         panel = self.fall_panels[tid]
 
-        if fall_status[tid] > 0:  # 낙상 감지됨
+        if fall_status[tid] == 0:  # 낙상 감지됨
             panel.setStyleSheet("background-color: red; color: white; border: 1px solid black;")
             
             # 일정 시간 후 초록색으로 변경하는 타이머 설정 (10초 후)

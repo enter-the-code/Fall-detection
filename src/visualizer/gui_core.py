@@ -358,7 +358,7 @@ class Window(QMainWindow):
 class Core:
     def __init__(self):
         # for fast run
-        self.isSlotRunning = False
+        # self.isSlotRunning = False
 
         self.cachedData = CachedDataType()
 
@@ -624,19 +624,20 @@ class Core:
             log.error("Parsing .cfg file failed. Did you select the right file?")
 
     def updateGraph(self, outputDict):
-        if self.demo != "3D People Tracking":
-            self.demoClassDict[self.demo].updateGraph(outputDict)
-        else:
-            # check main is busy with inference
-            if self.isSlotRunning == True:
-                # give up inference
-                self.demoClassDict[self.demo].updateGraph(outputDict, busy=True)
+        self.demoClassDict[self.demo].updateGraph(outputDict)
+        # if self.demo != "3D People Tracking":
+        #     self.demoClassDict[self.demo].updateGraph(outputDict)
+        # else:
+        #     # check main is busy with inference
+        #     if self.isSlotRunning == True:
+        #         # give up inference
+        #         self.demoClassDict[self.demo].updateGraph(outputDict, busy=True)
             
-            self.isSlotRunning = True
+        #     self.isSlotRunning = True
 
-            self.demoClassDict[self.demo].updateGraph(outputDict, busy=False)
+        #     self.demoClassDict[self.demo].updateGraph(outputDict, busy=False)
 
-            self.isSlotRunning = False
+        #     self.isSlotRunning = False
 
     def connectCom(self, cliCom, dataCom, connectStatus):
         if self.demo == DEMO_GESTURE:

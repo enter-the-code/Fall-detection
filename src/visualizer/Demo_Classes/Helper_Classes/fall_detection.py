@@ -7,6 +7,7 @@ from sklearn.metrics import pairwise_distances
 from scipy.optimize import linear_sum_assignment
 import tensorflow as tf
 from PySide2 import QtCore, QtWidgets
+from PySide2.QtCore import QThread, Signal
 
 model_path = r"src\visualizer\model\final_model.h5"
 
@@ -22,6 +23,15 @@ class FallDetection:
         self.one_person_threshold = one_person_threshold
         self.min_frame_ratio = min_frame_ratio
         self.model = self._load_model()
+
+        # thread
+        self.inferThread = InferThread(self)
+        # to prevent inference load
+        self.isSlotRunning = False
+        # for caching state
+        self.old_state = [3 for _ in range(5)]
+        self.dict_param = {}
+        self.output = self.old_state
 
     #모델 로드
     def _load_model(self):
@@ -190,14 +200,14 @@ class FallDetection:
         if clustered_data is not None:
             cluster_dataframes = self.track_clusters(clustered_data)
             if cluster_dataframes:
-                self.run_model(cluster_dataframes, tracks)
+                return self.run_model(cluster_dataframes, tracks)
             else:
                 # print("No valid clusters for prediction.")
-                pass
+                return self.old_state
         else:
             # print("Using naive data for prediction.")
             data = self.data
-            self.run_model({0: data}, tracks)
+            return self.run_model({0: data}, tracks)
 
     # Update the fall detection results for every track in the frame
     def step(self, outputDict):
@@ -227,6 +237,30 @@ class FallDetection:
 
             self.data = pd.DataFrame(queue_list, columns=['frameNum','pointNum','Range','Azimuth','Elevation','Doppler','SNR'])
 
-            self.run_pipeline(outputDict['trackData'])
+            # return self.run_pipeline(outputDict['trackData'])
+
+            if self.isSlotRunning == False:
+                return self.old_state
+            else:
+                self.faldt.isSlotRunning = True
+                self.dict_param = outputDict['trackData']
+                self.inferThread.start()
+                self.old_state = self.output
+                self.faldt.isSlotRunning = False
+                return self.output
+
         except KeyError:
             pass
+
+
+class InferThread(QThread):
+
+    def __init__(self, faldt: FallDetection):
+            QThread.__init__(self)
+            self.faldt = faldt
+
+    def run(self):
+        self.faldt.output = self.faldt.run_pipeline(self.faldt.dict_param)
+
+    def stop(self):
+        self.terminate()

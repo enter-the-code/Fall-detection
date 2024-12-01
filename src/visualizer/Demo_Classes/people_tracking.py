@@ -50,7 +50,7 @@ class PeopleTracking(Plot3D, Plot1D):
         self.trackColorMap = get_trackColors(self.maxTracks)
 
         # for caching state
-        self.old_state = 3
+        # self.old_state = 3
 
     def setupGUI(self, gridLayout, demoTabs, device):
         # Init setup pane on left hand side
@@ -137,12 +137,12 @@ class PeopleTracking(Plot3D, Plot1D):
                                     if(self.displayFallDet.checkState() == 2):
                                         # Compute the fall detection results for each object
                                         # is main is busy, skip inference
-                                        if busy == True:
-                                            fallDetectionDisplayResults = self.old_state
-                                        else:
-                                            fallDetectionDisplayResults = self.fallDetection.step(outputDict)
+                                        # if busy == True:
+                                        #     fallDetectionDisplayResults = self.old_state
+                                        # else:
+                                        fallDetectionDisplayResults = self.fallDetection.step(outputDict)
                                             # update state cache
-                                            self.old_state = fallDetectionDisplayResults
+                                            # self.old_state = fallDetectionDisplayResults
                                         self.update_fall_status(fallDetectionDisplayResults, tid, tracks)
                                         try:
                                             if (fallDetectionDisplayResults[tid] == 0): 

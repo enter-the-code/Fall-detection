@@ -15,21 +15,8 @@ pip install Pyside2
 ```
 로 설치 가능하다
 
-### pyqtgraph
+### 이외
 ```cmd
-pip install pyqtgraph
-```
-
-### pySerial
-```cmd
-pip install pyserial
-```
-
-### numpy
-```cmd
-pip install numpy
-```
-conda 사용시
-```cmd
-conda install numpy
+pip install pyqtgraph, pyserial, numpy, tensorflow
+conda install scikit-learn pandas
 ```

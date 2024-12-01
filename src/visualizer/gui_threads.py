@@ -10,6 +10,12 @@ from gui_parser import UARTParser
 from gui_common import *
 from graph_utilities import *
 
+import pyqtgraph.opengl as gl
+
+from Common_Tabs.plot_3d import Plot3D
+
+import copy
+
 # Logger
 import logging
 log = logging.getLogger(__name__)
@@ -67,7 +73,7 @@ class sendCommandThread(QThread):
 class updateQTTargetThread3D(QThread):
     done = Signal()
 
-    def __init__(self, pointCloud, targets, scatter, pcplot, numTargets, ellipsoids, coords, colorGradient=None, classifierOut=[], zRange=[-3, 3], pointColorMode="", drawTracks=True, trackColorMap=None, pointBounds={'enabled': False}):
+    def __init__(self, par, pointCloud, targets, scatter, pcplot: gl.GLViewWidget, numTargets, ellipsoids, coords, colorGradient=None, classifierOut=[], zRange=[-3, 3], pointColorMode="", drawTracks=True, trackColorMap=None, pointBounds={'enabled': False}):
         QThread.__init__(self)
         self.pointCloud = pointCloud
         self.targets = targets
@@ -87,6 +93,11 @@ class updateQTTargetThread3D(QThread):
         # This ignores divide by 0 errors when calculating the log2
         np.seterr(divide = 'ignore')
 
+        self.man_plt = par.man_plt
+
+        # for i in range(5):
+        #     self.man_plt.append(gl.GLLinePlotItem())
+
     def drawTrack(self, track, trackColor):
         # Get necessary track data
         tid = int(track[0])
@@ -94,11 +105,18 @@ class updateQTTargetThread3D(QThread):
         y = track[2]
         z = track[3]
 
-        track = self.ellipsoids[tid]
-        # mesh = getBoxLinesCoords(x,y,z, track[12])
+        # print(f"ploting on {x} {y} {z}")
+        # track = self.ellipsoids[tid]
+        # track = self.man_plt[tid]
+        self.track = gl.GLLinePlotItem()
         mesh = getBoxLinesCoords(x,y,z)
-        track.setData(pos=mesh,color=trackColor,width=2,antialias=True,mode='lines')
-        track.setVisible(True)
+        self.track.setData(pos=mesh,color=trackColor,width=2,antialias=True,mode='lines')
+        # self.pcplot.addItem(track)
+        # mesh = getBoxLinesCoords(x,y,z, track[12])
+        self.track.setVisible(True)
+        self.man_plt.append(self.track)
+        # self.man_plt[-1].setVisible(False)
+        
 
     # Return transparent color if pointBounds is enabled and point is outside pointBounds
     # Otherwise, color the point depending on which color mode we are in    
@@ -168,6 +186,7 @@ class updateQTTargetThread3D(QThread):
         for e in self.ellipsoids:
             if (e.visible()):
                 e.hide()
+        
         try:
             # Create a list of just X, Y, Z values to be plotted
             if(self.pointCloud is not None):
@@ -195,6 +214,12 @@ class updateQTTargetThread3D(QThread):
             # log.error("Unable to draw point cloud, ignoring and continuing execution...")
             pass
 
+            
+        while self.man_plt:
+            fig : gl.GLLinePlotItem = self.man_plt.pop()
+            fig.setVisible(False)
+            self.pcplot.removeItem(fig)
+
         # Graph the targets
         try:
             if (self.drawTracks):
@@ -203,8 +228,10 @@ class updateQTTargetThread3D(QThread):
                         trackID = int(track[0])
                         trackColor = self.trackColorMap[trackID]
                         self.drawTrack(track,trackColor)
-        except:
-            log.error("Unable to draw all tracks, ignoring and continuing execution...")
+                for fig in self.man_plt:
+                    self.pcplot.addItem(fig)
+        except Exception as e:
+            log.error(e, "Unable to draw all tracks, ignoring and continuing execution...")
             pass
 
         self.done.emit()

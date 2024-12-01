@@ -51,6 +51,7 @@ class PeopleTracking(Plot3D, Plot1D):
 
         # for caching state
         # self.old_state = 3
+        self.man_plt = []
 
     def setupGUI(self, gridLayout, demoTabs, device):
         # Init setup pane on left hand side
@@ -132,7 +133,7 @@ class PeopleTracking(Plot3D, Plot1D):
                                 # Found correct track
                                 if (int(track[0]) == int(height[0])):
                                     tid = int(height[0])
-                                    # height_str = 'tid : ' + str(height[0]) + ', height : ' + str(round(height[1], 2)) + ' m'
+                                    height_str = 'tid : ' + str(height[0]) + ', height : ' + str(round(height[1], 2)) + ' m'
                                     # If this track was computed to have fallen, display it on the screen
                                     if(self.displayFallDet.checkState() == 2):
                                         # Compute the fall detection results for each object
@@ -156,19 +157,20 @@ class PeopleTracking(Plot3D, Plot1D):
                                         #     pass
 
                                     # TODO
-                                    # self.coordStr[tid].setText(height_str)
-                                    # self.coordStr[tid].setX(track[1])
-                                    # self.coordStr[tid].setY(track[2])
-                                    # self.coordStr[tid].setZ(track[3])
-                                    # self.coordStr[tid].setVisible(True)
+                                    self.coordStr[tid].setText(height_str)
+                                    self.coordStr[tid].setX(track[1])
+                                    self.coordStr[tid].setY(track[2])
+                                    self.coordStr[tid].setZ(track[3])
+                                    self.coordStr[tid].setVisible(True)
                                     break
                 else:
-                    tracks = None
+                    # tracks = None
+                    return
             except IndexError:
                 pass
             if (self.plotComplete):
                 self.plotStart = int(round(time.time()*1000))
-                self.plot_3d_thread = updateQTTargetThread3D(self.cumulativeCloud, tracks, self.scatter, self.plot_3d, 0, self.ellipsoids, "", colorGradient=self.colorGradient, pointColorMode=self.pointColorMode.currentText(), trackColorMap=self.trackColorMap)
+                self.plot_3d_thread = updateQTTargetThread3D(self, self.cumulativeCloud, tracks, self.scatter, self.plot_3d, 0, self.ellipsoids, "", colorGradient=self.colorGradient, pointColorMode=self.pointColorMode.currentText(), trackColorMap=self.trackColorMap)
                 self.plotComplete = 0
                 self.plot_3d_thread.done.connect(lambda: self.graphDone(outputDict))
                 self.plot_3d_thread.start(priority=QThread.HighPriority)
@@ -329,7 +331,8 @@ class PeopleTracking(Plot3D, Plot1D):
         self.maxTracks = int(args[4])
         self.updateNumTracksBuffer() # Update the max number of tracks based off the config file
         self.trackColorMap = get_trackColors(self.maxTracks)
-        for m in range(self.maxTracks):
+        # for m in range(self.maxTracks):
+        for m in range(100):
             # Add track gui object
             mesh = gl.GLLinePlotItem()
             mesh.setVisible(False)

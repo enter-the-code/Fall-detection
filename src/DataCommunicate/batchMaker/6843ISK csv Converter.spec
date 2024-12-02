@@ -6,7 +6,6 @@ a = Analysis(
     binaries=[],
     datas=[
         ('img/bm_icon.ico','.'),
-        # ('C:/Users/Corsair/anaconda3/Library/bin/mkl_intel_thread.2.dll','.'),
         ],
     hiddenimports=[],
     hookspath=[],

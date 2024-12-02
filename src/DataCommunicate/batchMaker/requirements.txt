@@ -1,0 +1,4 @@
+# use python 3.10
+Pyside2
+pyserial
+numpy
